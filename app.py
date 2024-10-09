@@ -122,7 +122,9 @@ def copy_base_pack(base_folder):
 
 def zip_base_pack(base_folder_copy, public_id):
     parent_folder_name = "Converted Texture Pack"
-    zip_filename = os.path.join(app.config['UPLOAD_FOLDER'], f"{parent_folder_name}.zip")
+    temp_dir = tempfile.mkdtemp()
+    zip_filename = os.path.join(temp_dir, f"{parent_folder_name}.zip")
+    
     try:
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(base_folder_copy):
@@ -131,13 +133,21 @@ def zip_base_pack(base_folder_copy, public_id):
                     rel_path_in_base = os.path.relpath(file_path, base_folder_copy)
                     arcname = os.path.join(parent_folder_name, rel_path_in_base)
                     zipf.write(file_path, arcname)
+        
         logger.info(f"Zipped {base_folder_copy} to {zip_filename}")
-        result = cloudinary.uploader.upload(zip_filename, resource_type="raw", folder="processed_packs/")
-        return result['secure_url']
+        
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(zip_filename, 
+                                            resource_type="raw", 
+                                            folder="processed_packs/",
+                                            use_filename=True,
+                                            unique_filename=False)
+        
+        return result['secure_url'], zip_filename
     except Exception as e:
         logger.error(f"Error zipping folder {base_folder_copy}: {str(e)}")
         raise
-
+    
 def copy_to_base_folder(temp_folder, base_folder_copy):
     textures_folder = os.path.join(base_folder_copy, "textures")
     os.makedirs(textures_folder, exist_ok=True)
@@ -150,12 +160,10 @@ def copy_to_base_folder(temp_folder, base_folder_copy):
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+            return jsonify({"error": "No file part"}), 400
         file = request.files['file']
         if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
+            return jsonify({"error": "No selected file"}), 400
         if file and allowed_file(file.filename):
             try:
                 filename = secure_filename(file.filename)
@@ -181,27 +189,30 @@ def upload_file():
                 base_folder_copy = copy_base_pack(BASE_FOLDER)
                 copy_to_base_folder(temp_folder, base_folder_copy)
                 
-                cloudinary_url = zip_base_pack(base_folder_copy, public_id)
+                cloudinary_url, local_zip_path = zip_base_pack(base_folder_copy, public_id)
+
+                app.config['TEMP_FILES'] = getattr(app.config, 'TEMP_FILES', {})
+                temp_id = os.path.basename(local_zip_path)
+                app.config['TEMP_FILES'][temp_id] = local_zip_path
 
                 return jsonify({
-                "message": "File processed successfully",
-                "download_url": url_for('download_file', filename=os.path.basename(cloudinary_url), _external=True)
-            })
-                
+                    "message": "File processed successfully",
+                    "download_url": url_for('download_file', filename=temp_id, _external=True)
+                })
             except Exception as e:
                 logger.error(f"An error occurred during processing: {str(e)}")
                 return jsonify({"error": str(e)}), 500
+    
     return render_template('index.html')
 
-@app.route('/download/<path:filename>', methods=['GET'])
+@app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
     try:
-        # Check if the file exists in the UPLOAD_FOLDER
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(filename))
-        if os.path.exists(file_path):
-            return send_file(file_path, as_attachment=True)
+        temp_files = app.config.get('TEMP_FILES', {})
+        if filename in temp_files:
+            return send_file(temp_files[filename], as_attachment=True, download_name=f"{filename}.zip")
         else:
-            # If not in UPLOAD_FOLDER, assume it's a Cloudinary URL
+            # If not found locally, assume it's a Cloudinary URL
             return redirect(filename)
     except Exception as e:
         logger.error(f"Error in download_file: {str(e)}")
