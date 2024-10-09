@@ -156,6 +156,76 @@ def copy_to_base_folder(temp_folder, base_folder_copy):
             shutil.copy2(os.path.join(temp_folder, item), os.path.join(textures_folder, item))
             logger.info(f"Copied {item} to {textures_folder}, replacing if it already exists")
 
+def clean_up_folders(base_folder):
+    """
+    Clean up unnecessary folders and files based on the given folder structure.
+    Deletes all neighboring files/folders except the specified paths.
+    """
+    target_paths = [
+        os.path.join('assets', 'minecraft', 'textures', 'blocks'),
+        os.path.join('assets', 'minecraft', 'textures', 'block'),
+        os.path.join('textures', 'blocks')
+    ]
+
+    for root, dirs, files in os.walk(base_folder):
+        # Check if any of the target paths is found in the current directory path
+        for target_path in target_paths:
+            target_dir_path = os.path.join(base_folder, target_path)
+            if root.startswith(target_dir_path):
+                # We are inside one of the target paths (blocks/block), we can skip this path.
+                continue
+            if target_path in root:
+                # In case we're inside one of the relevant paths
+                continue
+
+        # If we are at the textures folder (or other levels), delete non-targeted files/folders
+        if 'textures' in root or 'assets' in root:
+            for dir_name in dirs[:]:  # [:] to modify the original list while iterating
+                if dir_name not in ['blocks', 'block']:
+                    dir_path = os.path.join(root, dir_name)
+                    shutil.rmtree(dir_path)
+                    logger.info(f"Deleted directory: {dir_path}")
+            
+            for file_name in files[:]:  # Deleting files in the same directory as textures/blocks
+                file_path = os.path.join(root, file_name)
+                os.remove(file_path)
+                logger.info(f"Deleted file: {file_path}")
+
+def zip_base_pack(base_folder_copy, public_id):
+    """
+    Zips the base folder, cleans up unnecessary files/folders first and then uploads the zip to Cloudinary.
+    """
+    # Clean up before creating the zip
+    clean_up_folders(base_folder_copy)
+
+    parent_folder_name = "Converted Texture Pack"
+    temp_dir = tempfile.mkdtemp()
+    zip_filename = os.path.join(temp_dir, f"{parent_folder_name}.zip")
+    
+    try:
+        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(base_folder_copy):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    rel_path_in_base = os.path.relpath(file_path, base_folder_copy)
+                    arcname = os.path.join(parent_folder_name, rel_path_in_base)
+                    zipf.write(file_path, arcname)
+        
+        logger.info(f"Zipped {base_folder_copy} to {zip_filename}")
+        
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(zip_filename, 
+                                            resource_type="raw", 
+                                            folder="processed_packs/",
+                                            use_filename=True,
+                                            unique_filename=False)
+        
+        return result['secure_url'], zip_filename
+    except Exception as e:
+        logger.error(f"Error zipping folder {base_folder_copy}: {str(e)}")
+        raise
+
+
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
