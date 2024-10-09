@@ -37,10 +37,8 @@ def allowed_file(filename):
 
 def delete_unnecessary_content(pack_folder):
     """
-    Deletes all files and directories that are not part of the specified paths.
-    - Keeps only 'assets/minecraft/textures/blocks' or 'assets/minecraft/textures/block'
-      or 'textures/blocks' and deletes everything else.
-    - Leaves directories with no sibling directories/files untouched.
+    Deletes files and directories that are not part of the specified paths,
+    while preserving the necessary directory structure.
     """
     allowed_paths = [
         os.path.join("assets", "minecraft", "textures", "blocks"),
@@ -48,21 +46,40 @@ def delete_unnecessary_content(pack_folder):
         os.path.join("textures", "blocks"),
     ]
     
+    def is_path_allowed(path):
+        return any(allowed.startswith(path) for allowed in allowed_paths)
+
     for root, dirs, files in os.walk(pack_folder, topdown=True):
-        # Relative path from the root of the texture pack folder
         rel_path = os.path.relpath(root, pack_folder)
         
-        # Check if the current directory is part of or leading to an allowed path
-        is_allowed = any([rel_path == os.path.commonpath([rel_path, p]) for p in allowed_paths])
-        
-        if not is_allowed and rel_path != '.':
-            # If the current directory is not part of an allowed path, check for siblings
-            if len(dirs) == 0 and len(files) == 0:
-                # No sibling directories or files, leave this directory alone
-                logger.info(f"Skipping {root} because it has no sibling files or directories.")
+        if rel_path == '.':
+            # Keep only directories that are part of allowed paths
+            dirs[:] = [d for d in dirs if is_path_allowed(os.path.join(rel_path, d))]
+            continue
+
+        if is_path_allowed(rel_path):
+            # We're in a directory that's part of an allowed path
+            if rel_path.endswith(os.path.join("textures")):
+                # Keep only 'blocks' or 'block' in 'textures'
+                dirs[:] = [d for d in dirs if d in ['blocks', 'block']]
+            elif rel_path.endswith(os.path.join("minecraft")):
+                # Keep only 'textures' in 'minecraft'
+                dirs[:] = [d for d in dirs if d == 'textures']
+            elif rel_path == 'assets':
+                # Keep only 'minecraft' in 'assets'
+                dirs[:] = [d for d in dirs if d == 'minecraft']
+            else:
+                # In deeper allowed directories, keep everything
                 continue
-            
-            # If siblings exist, delete all contents in the current directory
+
+            # Delete non-allowed files
+            for file in files:
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
+                logger.info(f"Deleted non-allowed file: {file_path}")
+        else:
+            # We're in a directory that's not part of an allowed path
+            # Delete everything here
             for file in files:
                 file_path = os.path.join(root, file)
                 os.remove(file_path)
@@ -71,26 +88,15 @@ def delete_unnecessary_content(pack_folder):
                 dir_path = os.path.join(root, dir)
                 shutil.rmtree(dir_path)
                 logger.info(f"Deleted directory: {dir_path}")
-            dirs[:] = []  # Prevent walking into subdirectories of non-allowed paths
-        
-        # If the directory is allowed, clean it by removing non-allowed subdirectories/files
-        elif is_allowed:
-            # In an allowed directory, we retain only the needed subfolders (blocks or block)
-            if rel_path.endswith(os.path.join("textures")):
-                # Retain only 'blocks' or 'block'
-                dirs[:] = [d for d in dirs if d in ['blocks', 'block']]
-            elif rel_path.endswith(os.path.join("minecraft")):
-                # Retain only 'textures' in 'minecraft'
-                dirs[:] = [d for d in ['textures']]
-            elif rel_path == 'assets':
-                # Retain only 'minecraft' in 'assets'
-                dirs[:] = [d for d in ['minecraft']]
-            
-            # All non-matching files are deleted
-            for file in files:
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
-                logger.info(f"Deleted non-allowed file in {root}: {file_path}")
+            dirs[:] = []  # Prevent walking into deleted directories
+
+    # Remove empty directories
+    for root, dirs, files in os.walk(pack_folder, topdown=False):
+        for dir in dirs:
+            dir_path = os.path.join(root, dir)
+            if not os.listdir(dir_path):
+                os.rmdir(dir_path)
+                logger.info(f"Deleted empty directory: {dir_path}")
 
 def extract_if_archive_cloudinary(file_url, public_id):
     temp_dir = tempfile.mkdtemp()
