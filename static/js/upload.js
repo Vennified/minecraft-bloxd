@@ -26,15 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.text();
+        const data = await response.json();
 
-        // Parse the HTML response and extract the download link from the template
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data, "text/html");
-        const downloadAnchor = doc.querySelector('.download-button');
+        if (data.error) {
+          throw new Error(data.error);
+        }
 
-        if (downloadAnchor) {
-          downloadLink.href = downloadAnchor.href;
+        if (data.download_url) {
+          downloadLink.href = data.download_url;
           downloadSection.style.display = "block"; // Show download section
           alert('File uploaded and processed successfully! You can now download your processed pack.');
         } else {
