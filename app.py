@@ -35,6 +35,31 @@ if not os.path.exists(UPLOAD_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def delete_unnecessary_content(pack_folder):
+    logger.info(f"Deleting unnecessary content from {pack_folder}")
+    
+    paths_to_keep = [
+        os.path.join('assets', 'minecraft', 'textures', 'blocks'),
+        os.path.join('assets', 'minecraft', 'textures', 'block'),
+        os.path.join('textures', 'blocks'),
+        os.path.join('textures', 'block')
+    ]
+    
+    for root, dirs, files in os.walk(pack_folder, topdown=False):
+        for path in paths_to_keep:
+            if path in root:
+                parent_dir = os.path.dirname(root)
+                for item in os.listdir(parent_dir):
+                    item_path = os.path.join(parent_dir, item)
+                    if os.path.isdir(item_path) and item not in path.split(os.sep):
+                        logger.info(f"Deleting directory: {item_path}")
+                        shutil.rmtree(item_path)
+                    elif os.path.isfile(item_path) and item != os.path.basename(root):
+                        logger.info(f"Deleting file: {item_path}")
+                        os.remove(item_path)
+    
+    logger.info("Finished deleting unnecessary content")
+
 def extract_if_archive_cloudinary(file_url, public_id):
     temp_dir = tempfile.mkdtemp()
     local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
@@ -46,6 +71,10 @@ def extract_if_archive_cloudinary(file_url, public_id):
     with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
         zip_ref.extractall(extracted_folder)
     logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
+    
+    # Add deletion step here
+    delete_unnecessary_content(extracted_folder)
+    
     return extracted_folder
 
 def get_blocks_folder(pack_folder):
@@ -156,76 +185,6 @@ def copy_to_base_folder(temp_folder, base_folder_copy):
             shutil.copy2(os.path.join(temp_folder, item), os.path.join(textures_folder, item))
             logger.info(f"Copied {item} to {textures_folder}, replacing if it already exists")
 
-def clean_up_folders(base_folder):
-    """
-    Clean up unnecessary folders and files based on the given folder structure.
-    Deletes all neighboring files/folders except the specified paths.
-    """
-    target_paths = [
-        os.path.join('assets', 'minecraft', 'textures', 'blocks'),
-        os.path.join('assets', 'minecraft', 'textures', 'block'),
-        os.path.join('textures', 'blocks')
-    ]
-
-    for root, dirs, files in os.walk(base_folder):
-        # Check if any of the target paths is found in the current directory path
-        for target_path in target_paths:
-            target_dir_path = os.path.join(base_folder, target_path)
-            if root.startswith(target_dir_path):
-                # We are inside one of the target paths (blocks/block), we can skip this path.
-                continue
-            if target_path in root:
-                # In case we're inside one of the relevant paths
-                continue
-
-        # If we are at the textures folder (or other levels), delete non-targeted files/folders
-        if 'textures' in root or 'assets' in root:
-            for dir_name in dirs[:]:  # [:] to modify the original list while iterating
-                if dir_name not in ['blocks', 'block']:
-                    dir_path = os.path.join(root, dir_name)
-                    shutil.rmtree(dir_path)
-                    logger.info(f"Deleted directory: {dir_path}")
-            
-            for file_name in files[:]:  # Deleting files in the same directory as textures/blocks
-                file_path = os.path.join(root, file_name)
-                os.remove(file_path)
-                logger.info(f"Deleted file: {file_path}")
-
-def zip_base_pack(base_folder_copy, public_id):
-    """
-    Zips the base folder, cleans up unnecessary files/folders first and then uploads the zip to Cloudinary.
-    """
-    # Clean up before creating the zip
-    clean_up_folders(base_folder_copy)
-
-    parent_folder_name = "Converted Texture Pack"
-    temp_dir = tempfile.mkdtemp()
-    zip_filename = os.path.join(temp_dir, f"{parent_folder_name}.zip")
-    
-    try:
-        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, dirs, files in os.walk(base_folder_copy):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    rel_path_in_base = os.path.relpath(file_path, base_folder_copy)
-                    arcname = os.path.join(parent_folder_name, rel_path_in_base)
-                    zipf.write(file_path, arcname)
-        
-        logger.info(f"Zipped {base_folder_copy} to {zip_filename}")
-        
-        # Upload to Cloudinary
-        result = cloudinary.uploader.upload(zip_filename, 
-                                            resource_type="raw", 
-                                            folder="processed_packs/",
-                                            use_filename=True,
-                                            unique_filename=False)
-        
-        return result['secure_url'], zip_filename
-    except Exception as e:
-        logger.error(f"Error zipping folder {base_folder_copy}: {str(e)}")
-        raise
-
-
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -237,10 +196,25 @@ def upload_file():
         if file and allowed_file(file.filename):
             try:
                 filename = secure_filename(file.filename)
-                result = cloudinary.uploader.upload(file, folder="uploads/", resource_type="raw")
+                
+                # Extract and process the file locally before uploading to Cloudinary
+                temp_dir = tempfile.mkdtemp()
+                local_file_path = os.path.join(temp_dir, filename)
+                file.save(local_file_path)
+                
+                # Extract and delete unnecessary content
+                extracted_folder = extract_if_archive_cloudinary(local_file_path, os.path.splitext(filename)[0])
+                
+                # Zip the processed folder
+                processed_zip_path = os.path.join(temp_dir, f"processed_{filename}")
+                shutil.make_archive(os.path.splitext(processed_zip_path)[0], 'zip', extracted_folder)
+                
+                # Upload the processed zip to Cloudinary
+                result = cloudinary.uploader.upload(processed_zip_path, folder="uploads/", resource_type="raw")
                 file_url = result['secure_url']
                 public_id = result['public_id']
                 
+                # Continue with the rest of the processing
                 resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
                 blocks_folder = get_blocks_folder(resource_pack_folder)
                 
@@ -773,6 +747,9 @@ def upload_file():
                 app.config['TEMP_FILES'] = getattr(app.config, 'TEMP_FILES', {})
                 temp_id = os.path.basename(local_zip_path)
                 app.config['TEMP_FILES'][temp_id] = local_zip_path
+
+                # Clean up temporary files
+                shutil.rmtree(temp_dir)
 
                 return jsonify({
                     "message": "File processed successfully",
