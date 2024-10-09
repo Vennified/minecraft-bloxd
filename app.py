@@ -37,66 +37,67 @@ def allowed_file(filename):
 
 def delete_unnecessary_content(pack_folder):
     """
-    Deletes files and directories that are not part of the specified paths,
-    while preserving the necessary directory structure.
+    Deletes specified directories and files from the texture pack folder.
     """
-    allowed_paths = [
-        os.path.join("assets", "minecraft", "textures", "blocks"),
-        os.path.join("assets", "minecraft", "textures", "block"),
-        os.path.join("textures", "blocks"),
-    ]
-    
-    def is_path_allowed(path):
-        return any(allowed.startswith(path) for allowed in allowed_paths)
-
-    for root, dirs, files in os.walk(pack_folder, topdown=True):
-        rel_path = os.path.relpath(root, pack_folder)
+    to_delete = [
+        # Files in root directory
+        "pack.png",
+        "pack.mcmeta",
         
-        if rel_path == '.':
-            # Keep only directories that are part of allowed paths
-            dirs[:] = [d for d in dirs if is_path_allowed(os.path.join(rel_path, d))]
-            continue
+        # Directories
+        "atlases",
+        "blockstates",
+        "font",
+        "lang",
+        "models",
+        "particles",
+        "shaders",
+        "texts",
+        "colormap",
+        "effect",
+        "entity",
+        "environment",
+        "gui",
+        "item",
+        "map",
+        "misc",
+        "mob_effect",
+        "painting",
+        "particle",
+        "trims",
+        "animation_controllers",
+        "animations",
+        "attachables",
+        "cameras",
+        "fogs",
+        "render_controllers",
+        "sounds",
+        "ui",
+        
+        # Additional files
+        ".gitignore",
+        "biomes_client.json",
+        "blocks.json",
+        "bug_pack_icon.png",
+        "manifest.json",
+        "pack_icon.png",
+        "README.md",
+        "sounds.json",
+        "splashes.json"
+    ]
 
-        if is_path_allowed(rel_path):
-            # We're in a directory that's part of an allowed path
-            if rel_path.endswith(os.path.join("textures")):
-                # Keep only 'blocks' or 'block' in 'textures'
-                dirs[:] = [d for d in dirs if d in ['blocks', 'block']]
-            elif rel_path.endswith(os.path.join("minecraft")):
-                # Keep only 'textures' in 'minecraft'
-                dirs[:] = [d for d in dirs if d == 'textures']
-            elif rel_path == 'assets':
-                # Keep only 'minecraft' in 'assets'
-                dirs[:] = [d for d in dirs if d == 'minecraft']
-            else:
-                # In deeper allowed directories, keep everything
-                continue
-
-            # Delete non-allowed files
-            for file in files:
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
-                logger.info(f"Deleted non-allowed file: {file_path}")
+    for item in to_delete:
+        path = os.path.join(pack_folder, item)
+        if os.path.isfile(path):
+            os.remove(path)
+            logger.info(f"Deleted file: {path}")
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
+            logger.info(f"Deleted directory: {path}")
         else:
-            # We're in a directory that's not part of an allowed path
-            # Delete everything here
-            for file in files:
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
-                logger.info(f"Deleted file: {file_path}")
-            for dir in dirs:
-                dir_path = os.path.join(root, dir)
-                shutil.rmtree(dir_path)
-                logger.info(f"Deleted directory: {dir_path}")
-            dirs[:] = []  # Prevent walking into deleted directories
+            logger.info(f"Not found: {path}")
 
-    # Remove empty directories
-    for root, dirs, files in os.walk(pack_folder, topdown=False):
-        for dir in dirs:
-            dir_path = os.path.join(root, dir)
-            if not os.listdir(dir_path):
-                os.rmdir(dir_path)
-                logger.info(f"Deleted empty directory: {dir_path}")
+    logger.info("Finished deleting specified content")
 
 def extract_if_archive_cloudinary(file_url, public_id):
     temp_dir = tempfile.mkdtemp()
