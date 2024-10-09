@@ -47,6 +47,7 @@ def delete_unnecessary_content(pack_folder):
         # Directories
         "atlases",
         "blockstates",
+        "optifine"
         "font",
         "lang",
         "models",
