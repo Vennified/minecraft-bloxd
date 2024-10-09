@@ -60,21 +60,11 @@ def delete_unnecessary_content(pack_folder):
     
     logger.info("Finished deleting unnecessary content")
 
-def extract_if_archive_cloudinary(file_url, public_id):
-    temp_dir = tempfile.mkdtemp()
-    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
-    os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
-    response = requests.get(file_url)
-    with open(local_zip_path, 'wb') as f:
-        f.write(response.content)
-    extracted_folder = os.path.splitext(local_zip_path)[0]
-    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+def extract_archive(file_path):
+    extracted_folder = os.path.splitext(file_path)[0]
+    with zipfile.ZipFile(file_path, 'r') as zip_ref:
         zip_ref.extractall(extracted_folder)
-    logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
-    
-    # Add deletion step here
-    delete_unnecessary_content(extracted_folder)
-    
+    logger.info(f"Extracted {file_path} to {extracted_folder}")
     return extracted_folder
 
 def get_blocks_folder(pack_folder):
@@ -185,7 +175,7 @@ def copy_to_base_folder(temp_folder, base_folder_copy):
             shutil.copy2(os.path.join(temp_folder, item), os.path.join(textures_folder, item))
             logger.info(f"Copied {item} to {textures_folder}, replacing if it already exists")
 
-@app.route('/', methods=['GET', 'POST'])
+app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -203,21 +193,20 @@ def upload_file():
                 file.save(local_file_path)
                 
                 # Extract and delete unnecessary content
-                extracted_folder = extract_if_archive_cloudinary(local_file_path, os.path.splitext(filename)[0])
+                extracted_folder = extract_archive(local_file_path)
+                delete_unnecessary_content(extracted_folder)
                 
                 # Zip the processed folder
                 processed_zip_path = os.path.join(temp_dir, f"processed_{filename}")
                 shutil.make_archive(os.path.splitext(processed_zip_path)[0], 'zip', extracted_folder)
                 
-                # Upload the processed zip to Cloudinary (fix applied here)
-                with open(processed_zip_path, 'rb') as zip_file:
-                    result = cloudinary.uploader.upload(zip_file, folder="uploads/", resource_type="raw")
-                
+                # Upload the processed zip to Cloudinary
+                result = cloudinary.uploader.upload(processed_zip_path, folder="uploads/", resource_type="raw")
                 file_url = result['secure_url']
                 public_id = result['public_id']
                 
                 # Continue with the rest of the processing
-                resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
+                resource_pack_folder = extract_archive(processed_zip_path)
                 blocks_folder = get_blocks_folder(resource_pack_folder)
                 
                 resize_images_to_32x(blocks_folder)
@@ -762,7 +751,6 @@ def upload_file():
                 return jsonify({"error": str(e)}), 500
     
     return render_template('index.html')
-
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
