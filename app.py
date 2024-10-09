@@ -197,7 +197,7 @@ def upload_file():
             try:
                 filename = secure_filename(file.filename)
                 
-                # Extract and process the file locally before uploading to Cloudinary
+                # Save the uploaded file locally
                 temp_dir = tempfile.mkdtemp()
                 local_file_path = os.path.join(temp_dir, filename)
                 file.save(local_file_path)
@@ -209,8 +209,10 @@ def upload_file():
                 processed_zip_path = os.path.join(temp_dir, f"processed_{filename}")
                 shutil.make_archive(os.path.splitext(processed_zip_path)[0], 'zip', extracted_folder)
                 
-                # Upload the processed zip to Cloudinary
-                result = cloudinary.uploader.upload(processed_zip_path, folder="uploads/", resource_type="raw")
+                # Upload the processed zip to Cloudinary (fix applied here)
+                with open(processed_zip_path, 'rb') as zip_file:
+                    result = cloudinary.uploader.upload(zip_file, folder="uploads/", resource_type="raw")
+                
                 file_url = result['secure_url']
                 public_id = result['public_id']
                 
@@ -760,6 +762,7 @@ def upload_file():
                 return jsonify({"error": str(e)}), 500
     
     return render_template('index.html')
+
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
