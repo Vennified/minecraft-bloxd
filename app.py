@@ -4,18 +4,34 @@ import zipfile
 import tempfile
 import time
 import logging
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+import requests
 import io
 from flask import Flask, request, redirect, url_for, render_template, flash, send_file
 from werkzeug.utils import secure_filename
 from PIL import Image
 from zipfile import ZipFile
+from celery_app import make_celery
 
 # Set up logging to print to console
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 app = Flask(__name__)
+app.config.update(
+    CELERY_BROKER_URL='amqp://localhost:5672',
+    CELERY_RESULT_BACKEND='rpc://'
+)
+celery = make_celery(app)
 app.secret_key = '4S$eJ7dL3pR9t8yU2i1o'
+
+cloudinary.config(
+    cloud_name='dmlqwwxpi',   # Replace with your cloud name
+    api_key='421642484339792',         # Replace with your API key
+    api_secret='G02yp4PpcEaXQIa062k_IxlUurw'    # Replace with your API secret
+)
 
 BASE_FOLDER = os.environ.get('BASE_FOLDER', 'base_pack')
 UPLOAD_FOLDER = tempfile.mkdtemp()  
@@ -29,16 +45,20 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Extraction
-def extract_if_archive(resource_pack):
-    if not (resource_pack.endswith(".zip") or resource_pack.endswith(".jar")):
-        logger.error(f"File '{resource_pack}' is not a zip or jar archive.")
-        raise ValueError("Provided file is not a zip or jar archive.")
-    
-    with zipfile.ZipFile(resource_pack, 'r') as zip_ref:
-        extracted_folder = os.path.splitext(resource_pack)[0]
+def extract_if_archive_cloudinary(file_url, public_id):
+    temp_dir = tempfile.mkdtemp()  # Create a temp directory to store the zip file
+    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
+
+    # Download the file from Cloudinary
+    response = requests.get(file_url)
+    with open(local_zip_path, 'wb') as f:
+        f.write(response.content)
+
+    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+        extracted_folder = os.path.splitext(local_zip_path)[0]
         zip_ref.extractall(extracted_folder)
     
-    logger.info(f"Extracted {resource_pack} to {extracted_folder}")
+    logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
     return extracted_folder
 
 
@@ -131,32 +151,29 @@ def copy_base_pack(base_folder):
     return base_folder_copy
 
 # Zip base pack
-def zip_base_pack(base_folder_copy):
-    parent_folder_name = "Converted Texture Pack"  # Define the parent folder name
-    zip_filename = os.path.join(UPLOAD_FOLDER, f"{parent_folder_name}.zip")  # Save in uploads (/tmp)
+def zip_base_pack(base_folder_copy, public_id):
+    parent_folder_name = "Converted Texture Pack"
+    zip_filename = os.path.join(app.config['UPLOAD_FOLDER'], f"{parent_folder_name}.zip")
     
-    logger.info(f"Creating zip file at {zip_filename}")  # Log this for debugging
-
     try:
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(base_folder_copy):
                 for file in files:
                     file_path = os.path.join(root, file)
-                    
-                    # Compute the archive name by adding the parent folder
                     rel_path_in_base = os.path.relpath(file_path, base_folder_copy)
                     arcname = os.path.join(parent_folder_name, rel_path_in_base)
-                    
-                    # Write the file into the zip with the new archive name
                     zipf.write(file_path, arcname)
         
-        logger.info(f"Zipped {base_folder_copy} to {zip_filename} with parent folder '{parent_folder_name}'")
-        logger.info(f"Zip file exists? {os.path.exists(zip_filename)}")  # Check if the file exists after creation
-        
+        logger.info(f"Zipped {base_folder_copy} to {zip_filename}")
+
+        # Upload the zip file to Cloudinary
+        result = cloudinary.uploader.upload(zip_filename, resource_type="raw", folder="processed_packs/")
+        return result['secure_url']
+    
     except Exception as e:
         logger.error(f"Error zipping folder {base_folder_copy}: {str(e)}")
         raise
-    return zip_filename
+
 
 # Copy images to base folder
 def copy_to_base_folder(temp_folder, base_folder_copy):
@@ -185,13 +202,17 @@ def upload_file():
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
-        
+
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            resource_pack_folder = extract_if_archive(filepath)
+
+            # Upload the file to Cloudinary
+            result = cloudinary.uploader.upload(file, folder="uploads/")
+            file_url = result['secure_url']
+            public_id = result['public_id']
+
+            # Use the URL for further processing (instead of local path)
+            resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
             blocks_folder = get_blocks_folder(resource_pack_folder)
 
             try:
@@ -492,10 +513,9 @@ def upload_file():
             "wooden_shovel": "wood_shovel",
             "wooden_sword": "wood_sword"
             }
-            temp_folder = tempfile.mkdtemp()
 
             try:
-                rename_images(blocks_folder, rename_map, temp_folder)
+                rename_images(blocks_folder, rename_map, public_id)
                 
                 override_list = [
                     "allium",
@@ -720,15 +740,15 @@ def upload_file():
             "wooden_sword",
             "glistering_melon_slice"
                 ]
-                copy_overridden_images(blocks_folder, temp_folder, override_list)
+                copy_overridden_images(blocks_folder, override_list)
 
                 base_folder_copy = copy_base_pack(BASE_FOLDER)
-                copy_to_base_folder(temp_folder, base_folder_copy)
+                copy_to_base_folder(blocks_folder, base_folder_copy)
 
-                # Create the zip file using the zip_base_pack function
-                zip_filename = zip_base_pack(base_folder_copy)
+                # Create the zip file and upload it to Cloudinary
+                zip_filename = zip_base_pack(base_folder_copy, public_id)
 
-                # Return a download button to the user
+                # Return a download button to the user with the Cloudinary URL
                 return render_template('download.html', filename=zip_filename)
 
             except Exception as e:
@@ -737,40 +757,20 @@ def upload_file():
 
     return render_template('index.html')
 
+
+# Download file route
 # Download file route
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
-    temp_dir = tempfile.gettempdir()
-    file_path = os.path.join(temp_dir, filename)
-
     try:
-        if os.path.exists(file_path):
-            logger.info(f"File found: {file_path}")
-            return send_file(file_path, as_attachment=True)
-        else:
-            logger.error(f"File '{filename}' not found.")
-            flash(f"File '{filename}' could not be found. Please upload again.")
-            return redirect(url_for('upload_file'))
-    finally:
-        # Cleanup the temp zip file after download
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logger.info(f"Cleaned up temporary file: {file_path}")
-
-
-
-
-
-# Helper function to zip the modified base folder
-def zip_base_pack(base_folder):
-    zip_filename = os.path.join(app.config['UPLOAD_FOLDER'], "Converted_Texture_Pack.zip")
-    with ZipFile(zip_filename, 'w') as zipf:
-        for root, dirs, files in os.walk(base_folder):
-            for file in files:
-                file_path = os.path.join(root, file)
-                rel_path_in_base = os.path.relpath(file_path, base_folder)
-                zipf.write(file_path, rel_path_in_base)
-    return zip_filename
+        # Get the Cloudinary URL for the file
+        result = cloudinary.api.resource(filename)
+        zip_url = result['secure_url']
+        return redirect(zip_url)  # Redirect user to Cloudinary file URL
+    except Exception as e:
+        logger.error(f"Error downloading file: {str(e)}")
+        flash(f"Error downloading file: {str(e)}")
+        return redirect(url_for('upload_file'))
 
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
