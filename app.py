@@ -30,13 +30,17 @@ def allowed_file(filename):
 
 # Extraction
 def extract_if_archive(resource_pack):
-    if resource_pack.endswith(".zip") or resource_pack.endswith(".jar"):
-        with zipfile.ZipFile(resource_pack, 'r') as zip_ref:
-            extracted_folder = os.path.splitext(resource_pack)[0]
-            zip_ref.extractall(extracted_folder)
-        logger.info(f"Extracted {resource_pack} to {extracted_folder}")
-        return extracted_folder
-    return resource_pack
+    if not (resource_pack.endswith(".zip") or resource_pack.endswith(".jar")):
+        logger.error(f"File '{resource_pack}' is not a zip or jar archive.")
+        raise ValueError("Provided file is not a zip or jar archive.")
+    
+    with zipfile.ZipFile(resource_pack, 'r') as zip_ref:
+        extracted_folder = os.path.splitext(resource_pack)[0]
+        zip_ref.extractall(extracted_folder)
+    
+    logger.info(f"Extracted {resource_pack} to {extracted_folder}")
+    return extracted_folder
+
 
 # Locate blocks folder
 def get_blocks_folder(pack_folder):
@@ -49,10 +53,14 @@ def get_blocks_folder(pack_folder):
             blocks_folder = os.path.join(root, 'block')
             logger.info(f"Found block folder at {blocks_folder}")
             return blocks_folder
+    
+    # Raise an error if no folder is found
+    logger.error("Blocks folder not found in the resource pack.")
     raise FileNotFoundError("Blocks folder not found in the resource pack.")
 
+
 # Resize images to 32x32
-def resize_images_to_32x(blocks_folder):
+def resize_images_to_32x(blocks_folder):    
     dirt_image_path = os.path.join(blocks_folder, "dirt.png")
 
     if not os.path.exists(dirt_image_path):
@@ -65,6 +73,7 @@ def resize_images_to_32x(blocks_folder):
         if width > 32 and height > 32:
             logger.info("Resource pack is larger than 32x, resizing images.")
             for filename in os.listdir(blocks_folder):
+                # Ensure the file is a PNG before resizing
                 if filename.endswith(".png"):
                     img_path = os.path.join(blocks_folder, filename)
                     with Image.open(img_path) as img:
@@ -75,8 +84,11 @@ def resize_images_to_32x(blocks_folder):
                             logger.info(f"Resized {filename} from {img_width}x{img_height} to 32x32.")
                         else:
                             logger.info(f"{filename} is {img_width}x{img_height}, no need to resize.")
+                else:
+                    logger.info(f"Skipping non-PNG file: {filename}")
         else:
             logger.info("Resource pack is 32x or lower, no resizing necessary.")
+
 
 # Rename images
 def rename_images(blocks_folder, rename_map, temp_folder):
@@ -728,25 +740,25 @@ def upload_file():
 # Download file route
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
-    
-    logger.info(f"Attempting to download file: {file_path}")
+    temp_dir = tempfile.gettempdir()
+    file_path = os.path.join(temp_dir, filename)
 
-    if os.path.exists(file_path):
-        logger.info(f"File found: {file_path}")
-        response = send_file(file_path, as_attachment=True)
-        
-        try:
-            cleanup_temp_folder(UPLOAD_FOLDER)
-            logger.info(f"Cleaned up temporary folder after download: {UPLOAD_FOLDER}")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {str(e)}")
-        
-        return response
-    else:
-        logger.error(f"File '{filename}' not found at {file_path}.")
-        flash(f"File '{filename}' not found.")
-        return redirect(url_for('upload_file'))
+    try:
+        if os.path.exists(file_path):
+            logger.info(f"File found: {file_path}")
+            return send_file(file_path, as_attachment=True)
+        else:
+            logger.error(f"File '{filename}' not found.")
+            flash(f"File '{filename}' could not be found. Please upload again.")
+            return redirect(url_for('upload_file'))
+    finally:
+        # Cleanup the temp zip file after download
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"Cleaned up temporary file: {file_path}")
+
+
+
 
 
 # Helper function to zip the modified base folder
