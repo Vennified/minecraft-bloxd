@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft Resource Pack Image Manager</title>
-
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
 </head>
 <body>
@@ -27,16 +26,12 @@
         <input type="submit" value="Upload">
     </form>
 
-    <!-- Display the download button only if the zip is ready -->
-    {% if download_filename %}
-    <br><br>
-    <form method="GET" action="{{ url_for('download_file', filename=download_filename) }}">
-        <button type="submit">Download Processed Pack</button>
-    </form>
-    {% endif %}
+    <div id="downloadSection" style="display:none;">
+        <h2>Your file is ready for download:</h2>
+        <a id="downloadLink" href="#" download>Download Processed Pack</a>
+    </div>
 
-    <!-- Move the script to the end -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
-    <script src="{{ url_for('static', filename='js/upload.js') }}"></script> <!-- Linking external JS -->
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 </body>
 </html>

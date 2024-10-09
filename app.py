@@ -8,33 +8,25 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 import requests
-import io
-from flask import Flask, request, redirect, url_for, render_template, flash, send_file
+from flask import Flask, request, redirect, url_for, render_template, flash
 from werkzeug.utils import secure_filename
 from PIL import Image
-from zipfile import ZipFile
-from celery_app import make_celery
 
-# Set up logging to print to console
+# Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config.update(
-    CELERY_BROKER_URL='amqp://localhost:5672',
-    CELERY_RESULT_BACKEND='rpc://'
-)
-celery = make_celery(app)
 app.secret_key = '4S$eJ7dL3pR9t8yU2i1o'
 
 cloudinary.config(
-    cloud_name='dmlqwwxpi',   # Replace with your cloud name
-    api_key='421642484339792',         # Replace with your API key
-    api_secret='G02yp4PpcEaXQIa062k_IxlUurw'    # Replace with your API secret
+    cloud_name='dmlqwwxpi',
+    api_key='421642484339792',
+    api_secret='G02yp4PpcEaXQIa062k_IxlUurw'
 )
 
 BASE_FOLDER = os.environ.get('BASE_FOLDER', 'base_pack')
-UPLOAD_FOLDER = tempfile.mkdtemp()  
+UPLOAD_FOLDER = tempfile.mkdtemp()
 ALLOWED_EXTENSIONS = {'zip', 'jar'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -44,32 +36,19 @@ if not os.path.exists(UPLOAD_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Extraction
 def extract_if_archive_cloudinary(file_url, public_id):
-    # Create a temp directory to store the zip file
-    temp_dir = tempfile.mkdtemp()  
-    local_zip_path = os.path.join(temp_dir, "uploads", f"{public_id}.zip")
-
-    # Ensure the directory exists
+    temp_dir = tempfile.mkdtemp()
+    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
     os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
-
-    # Download the file from Cloudinary
     response = requests.get(file_url)
-    
-    # Write the downloaded ZIP file to the local path
     with open(local_zip_path, 'wb') as f:
         f.write(response.content)
-
-    # Extract the ZIP file
+    extracted_folder = os.path.splitext(local_zip_path)[0]
     with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-        extracted_folder = os.path.splitext(local_zip_path)[0]
         zip_ref.extractall(extracted_folder)
-
     logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
     return extracted_folder
 
-
-# Locate blocks folder
 def get_blocks_folder(pack_folder):
     for root, dirs, files in os.walk(pack_folder):
         if 'blocks' in dirs:
@@ -80,27 +59,19 @@ def get_blocks_folder(pack_folder):
             blocks_folder = os.path.join(root, 'block')
             logger.info(f"Found block folder at {blocks_folder}")
             return blocks_folder
-    
-    # Raise an error if no folder is found
     logger.error("Blocks folder not found in the resource pack.")
     raise FileNotFoundError("Blocks folder not found in the resource pack.")
 
-
-# Resize images to 32x32
-def resize_images_to_32x(blocks_folder):    
+def resize_images_to_32x(blocks_folder):
     dirt_image_path = os.path.join(blocks_folder, "dirt.png")
-
     if not os.path.exists(dirt_image_path):
         raise FileNotFoundError("dirt.png not found in blocks folder, cannot determine resource pack resolution.")
-
     with Image.open(dirt_image_path) as dirt_img:
         width, height = dirt_img.size
         logger.info(f"dirt.png dimensions: {width}x{height}")
-
         if width > 32 and height > 32:
             logger.info("Resource pack is larger than 32x, resizing images.")
             for filename in os.listdir(blocks_folder):
-                # Ensure the file is a PNG before resizing
                 if filename.endswith(".png"):
                     img_path = os.path.join(blocks_folder, filename)
                     with Image.open(img_path) as img:
@@ -116,9 +87,8 @@ def resize_images_to_32x(blocks_folder):
         else:
             logger.info("Resource pack is 32x or lower, no resizing necessary.")
 
-
-# Rename images
-def rename_images(blocks_folder, rename_map, temp_folder):
+def rename_images(blocks_folder, rename_map):
+    temp_folder = tempfile.mkdtemp()
     for old_name, new_name in rename_map.items():
         old_path = os.path.join(blocks_folder, f"{old_name}.png")
         new_path_temp = os.path.join(temp_folder, f"{new_name}.png")
@@ -127,8 +97,8 @@ def rename_images(blocks_folder, rename_map, temp_folder):
             logger.info(f"Renamed {old_name}.png to {new_name}.png and moved to temp folder")
         else:
             logger.info(f"Image {old_name}.png not found for renaming")
+    return temp_folder
 
-# Copy overridden images
 def copy_overridden_images(blocks_folder, temp_folder, override_list):
     for item in override_list:
         item_path = os.path.join(blocks_folder, f"{item}.png")
@@ -138,30 +108,22 @@ def copy_overridden_images(blocks_folder, temp_folder, override_list):
         else:
             logger.info(f"Override image {item}.png not found")
 
-# Copy base pack
 def copy_base_pack(base_folder):
     base_folder_path = os.path.abspath(base_folder)
-
     if not os.path.exists(base_folder_path):
         logger.error(f"Base pack folder '{base_folder_path}' does not exist.")
         raise FileNotFoundError(f"Base pack folder '{base_folder_path}' does not exist.")
-
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     temp_base_folder_copy = tempfile.mkdtemp(dir='/tmp')
-
     base_folder_name = os.path.basename(base_folder_path)
     base_folder_copy = os.path.join(temp_base_folder_copy, f"{base_folder_name}_copy_{timestamp}")
-    
     shutil.copytree(base_folder_path, base_folder_copy)
-
     logger.info(f"Copied base folder to {base_folder_copy}")
     return base_folder_copy
 
-# Zip base pack
 def zip_base_pack(base_folder_copy, public_id):
     parent_folder_name = "Converted Texture Pack"
     zip_filename = os.path.join(app.config['UPLOAD_FOLDER'], f"{parent_folder_name}.zip")
-    
     try:
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(base_folder_copy):
@@ -170,66 +132,45 @@ def zip_base_pack(base_folder_copy, public_id):
                     rel_path_in_base = os.path.relpath(file_path, base_folder_copy)
                     arcname = os.path.join(parent_folder_name, rel_path_in_base)
                     zipf.write(file_path, arcname)
-        
         logger.info(f"Zipped {base_folder_copy} to {zip_filename}")
-
-        # Upload the zip file to Cloudinary
         result = cloudinary.uploader.upload(zip_filename, resource_type="raw", folder="processed_packs/")
         return result['secure_url']
-    
     except Exception as e:
         logger.error(f"Error zipping folder {base_folder_copy}: {str(e)}")
         raise
 
-
-# Copy images to base folder
 def copy_to_base_folder(temp_folder, base_folder_copy):
     textures_folder = os.path.join(base_folder_copy, "textures")
     os.makedirs(textures_folder, exist_ok=True)
-
     for item in os.listdir(temp_folder):
         if item.endswith(".png"):
             shutil.copy2(os.path.join(temp_folder, item), os.path.join(textures_folder, item))
             logger.info(f"Copied {item} to {textures_folder}, replacing if it already exists")
 
-# Cleanup temp folder
-def cleanup_temp_folder(temp_folder):
-    shutil.rmtree(temp_folder)
-    logger.info(f"Cleaned up temporary folder at {temp_folder}")
-
-# File upload route
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
-        
         file = request.files['file']
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
-
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-
-            # Upload the file to Cloudinary as a raw file (non-image/video)
-            result = cloudinary.uploader.upload(file, folder="uploads/", resource_type="raw")
-            file_url = result['secure_url']
-            public_id = result['public_id']
-
-            # Use the URL for further processing (instead of local path)
-            resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
-            blocks_folder = get_blocks_folder(resource_pack_folder)
-
             try:
+                filename = secure_filename(file.filename)
+                result = cloudinary.uploader.upload(file, folder="uploads/", resource_type="raw")
+                file_url = result['secure_url']
+                public_id = result['public_id']
+                
+                resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
+                blocks_folder = get_blocks_folder(resource_pack_folder)
+                
                 resize_images_to_32x(blocks_folder)
-            except Exception as e:
-                flash(f"Error resizing images: {str(e)}")
-                return redirect(request.url)
-
-            rename_map = {
-                "acacia_log": "log_plum",
+                
+                rename_map = {
+                    "acacia_log": "log_plum",
             "acacia_planks": "planks_plum",
             "acacia_sapling": "plum_sapling",
             "birch_log": "log_aspen",
@@ -519,10 +460,8 @@ def upload_file():
             "wooden_pickaxe": "wood_pickaxe",
             "wooden_shovel": "wood_shovel",
             "wooden_sword": "wood_sword"
-            }
-
-            try:
-                rename_images(blocks_folder, rename_map, public_id)
+                }
+                temp_folder = rename_images(blocks_folder, rename_map)
                 
                 override_list = [
                     "allium",
@@ -747,38 +686,23 @@ def upload_file():
             "wooden_sword",
             "glistering_melon_slice"
                 ]
-                copy_overridden_images(blocks_folder, override_list)
-
+                copy_overridden_images(blocks_folder, temp_folder, override_list)
+                
                 base_folder_copy = copy_base_pack(BASE_FOLDER)
-                copy_to_base_folder(blocks_folder, base_folder_copy)
-
-                # Create the zip file and upload it to Cloudinary
-                zip_filename = zip_base_pack(base_folder_copy, public_id)
-
-                # Return a download button to the user with the Cloudinary URL
-                return render_template('download.html', filename=zip_filename)
-
+                copy_to_base_folder(temp_folder, base_folder_copy)
+                
+                cloudinary_url = zip_base_pack(base_folder_copy, public_id)
+                
+                return render_template('download.html', filename=cloudinary_url)
             except Exception as e:
+                logger.error(f"An error occurred during processing: {str(e)}")
                 flash(f"An error occurred during processing: {str(e)}")
                 return redirect(request.url)
-
     return render_template('index.html')
 
-
-
-# Download file route
-# Download file route
-@app.route('/download/<filename>', methods=['GET'])
+@app.route('/download/<path:filename>', methods=['GET'])
 def download_file(filename):
-    try:
-        # Get the Cloudinary URL for the file
-        result = cloudinary.api.resource(filename)
-        zip_url = result['secure_url']
-        return redirect(zip_url)  # Redirect user to Cloudinary file URL
-    except Exception as e:
-        logger.error(f"Error downloading file: {str(e)}")
-        flash(f"Error downloading file: {str(e)}")
-        return redirect(url_for('upload_file'))
+    return redirect(filename)  # Direct redirect to Cloudinary URL
 
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'

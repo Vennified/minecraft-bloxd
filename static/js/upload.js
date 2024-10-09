@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('uploadForm');
   const fileInput = document.getElementById('file');
+  const downloadSection = document.getElementById('downloadSection');
+  const downloadLink = document.getElementById('downloadLink');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -12,20 +14,35 @@ document.addEventListener('DOMContentLoaded', function() {
       formData.append("file", file);
 
       try {
+        // Show loading message
+        alert('Uploading and processing file. Please wait...');
+
         const response = await fetch("/", {
           method: "POST",
           body: formData
         });
 
         if (!response.ok) {
-          alert('Error uploading file.');
-          return;
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        alert('File uploaded and processed successfully!');
+        const data = await response.text();
+
+        // Parse the HTML response and extract the download link from the template
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, "text/html");
+        const downloadAnchor = doc.querySelector('.download-button');
+
+        if (downloadAnchor) {
+          downloadLink.href = downloadAnchor.href;
+          downloadSection.style.display = "block"; // Show download section
+          alert('File uploaded and processed successfully! You can now download your processed pack.');
+        } else {
+          throw new Error('Download link not found in the response.');
+        }
       } catch (error) {
         console.error('Error:', error);
-        alert('Error uploading file.');
+        alert(`Error: ${error.message}`);
       }
     } else {
       alert('No file selected.');
