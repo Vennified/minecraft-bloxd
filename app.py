@@ -46,18 +46,25 @@ def allowed_file(filename):
 
 # Extraction
 def extract_if_archive_cloudinary(file_url, public_id):
-    temp_dir = tempfile.mkdtemp()  # Create a temp directory to store the zip file
-    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
+    # Create a temp directory to store the zip file
+    temp_dir = tempfile.mkdtemp()  
+    local_zip_path = os.path.join(temp_dir, "uploads", f"{public_id}.zip")
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
 
     # Download the file from Cloudinary
     response = requests.get(file_url)
+    
+    # Write the downloaded ZIP file to the local path
     with open(local_zip_path, 'wb') as f:
         f.write(response.content)
 
+    # Extract the ZIP file
     with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
         extracted_folder = os.path.splitext(local_zip_path)[0]
         zip_ref.extractall(extracted_folder)
-    
+
     logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
     return extracted_folder
 
