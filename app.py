@@ -36,36 +36,61 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def delete_unnecessary_content(pack_folder):
-    logger.info(f"Deleting unnecessary content from {pack_folder}")
-    
-    paths_to_keep = [
-        os.path.join('assets', 'minecraft', 'textures', 'blocks'),
-        os.path.join('assets', 'minecraft', 'textures', 'block'),
-        os.path.join('textures', 'blocks'),
-        os.path.join('textures', 'block')
+    """
+    Deletes all files and directories that are not part of the specified paths.
+    - Keeps only 'assets/minecraft/textures/blocks' or 'assets/minecraft/textures/block'
+      or 'textures/blocks' and deletes everything else.
+    """
+    allowed_paths = [
+        os.path.join("assets", "minecraft", "textures", "blocks"),
+        os.path.join("assets", "minecraft", "textures", "block"),
+        os.path.join("textures", "blocks"),
     ]
     
-    for root, dirs, files in os.walk(pack_folder, topdown=False):
-        for path in paths_to_keep:
-            if path in root:
-                parent_dir = os.path.dirname(root)
-                for item in os.listdir(parent_dir):
-                    item_path = os.path.join(parent_dir, item)
-                    if os.path.isdir(item_path) and item not in path.split(os.sep):
-                        logger.info(f"Deleting directory: {item_path}")
-                        shutil.rmtree(item_path)
-                    elif os.path.isfile(item_path) and item != os.path.basename(root):
-                        logger.info(f"Deleting file: {item_path}")
-                        os.remove(item_path)
+    for root, dirs, files in os.walk(pack_folder, topdown=True):
+        # Relative path from the root of the texture pack folder
+        rel_path = os.path.relpath(root, pack_folder)
+        
+        # Check if the current directory is a parent of an allowed path
+        is_allowed = any([rel_path == os.path.commonpath([rel_path, p]) for p in allowed_paths])
+        
+        if not is_allowed and rel_path != '.':
+            # If the current directory is not part of an allowed path, delete all its contents
+            for file in files:
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
+                logger.info(f"Deleted file: {file_path}")
+            for dir in dirs:
+                dir_path = os.path.join(root, dir)
+                shutil.rmtree(dir_path)
+                logger.info(f"Deleted directory: {dir_path}")
+            dirs[:] = []  # Clear dirs to prevent walking into subdirectories
     
-    logger.info("Finished deleting unnecessary content")
+    # After cleaning, ensure that only the allowed directories exist
+    for path in allowed_paths:
+        full_path = os.path.join(pack_folder, path)
+        if os.path.exists(full_path):
+            logger.info(f"Retained allowed path: {full_path}")
+        else:
+            logger.warning(f"Allowed path {full_path} does not exist in the resource pack.")
 
-def extract_archive(file_path):
-    extracted_folder = os.path.splitext(file_path)[0]
-    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+def extract_if_archive_cloudinary(file_url, public_id):
+    temp_dir = tempfile.mkdtemp()
+    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
+    os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
+    response = requests.get(file_url)
+    with open(local_zip_path, 'wb') as f:
+        f.write(response.content)
+    extracted_folder = os.path.splitext(local_zip_path)[0]
+    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
         zip_ref.extractall(extracted_folder)
-    logger.info(f"Extracted {file_path} to {extracted_folder}")
+    logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
+
+    # Call the deletion function to remove unnecessary content
+    delete_unnecessary_content(extracted_folder)
+
     return extracted_folder
+
 
 def get_blocks_folder(pack_folder):
     for root, dirs, files in os.walk(pack_folder):
@@ -175,7 +200,7 @@ def copy_to_base_folder(temp_folder, base_folder_copy):
             shutil.copy2(os.path.join(temp_folder, item), os.path.join(textures_folder, item))
             logger.info(f"Copied {item} to {textures_folder}, replacing if it already exists")
 
-app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -186,27 +211,11 @@ def upload_file():
         if file and allowed_file(file.filename):
             try:
                 filename = secure_filename(file.filename)
-                
-                # Save the uploaded file locally
-                temp_dir = tempfile.mkdtemp()
-                local_file_path = os.path.join(temp_dir, filename)
-                file.save(local_file_path)
-                
-                # Extract and delete unnecessary content
-                extracted_folder = extract_archive(local_file_path)
-                delete_unnecessary_content(extracted_folder)
-                
-                # Zip the processed folder
-                processed_zip_path = os.path.join(temp_dir, f"processed_{filename}")
-                shutil.make_archive(os.path.splitext(processed_zip_path)[0], 'zip', extracted_folder)
-                
-                # Upload the processed zip to Cloudinary
-                result = cloudinary.uploader.upload(processed_zip_path, folder="uploads/", resource_type="raw")
+                result = cloudinary.uploader.upload(file, folder="uploads/", resource_type="raw")
                 file_url = result['secure_url']
                 public_id = result['public_id']
                 
-                # Continue with the rest of the processing
-                resource_pack_folder = extract_archive(processed_zip_path)
+                resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
                 blocks_folder = get_blocks_folder(resource_pack_folder)
                 
                 resize_images_to_32x(blocks_folder)
@@ -738,9 +747,6 @@ def upload_file():
                 app.config['TEMP_FILES'] = getattr(app.config, 'TEMP_FILES', {})
                 temp_id = os.path.basename(local_zip_path)
                 app.config['TEMP_FILES'][temp_id] = local_zip_path
-
-                # Clean up temporary files
-                shutil.rmtree(temp_dir)
 
                 return jsonify({
                     "message": "File processed successfully",
