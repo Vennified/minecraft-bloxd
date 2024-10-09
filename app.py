@@ -206,8 +206,8 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
 
-            # Upload the file to Cloudinary
-            result = cloudinary.uploader.upload(file, folder="uploads/")
+            # Upload the file to Cloudinary as a raw file (non-image/video)
+            result = cloudinary.uploader.upload(file, folder="uploads/", resource_type="raw")
             file_url = result['secure_url']
             public_id = result['public_id']
 
@@ -756,6 +756,7 @@ def upload_file():
                 return redirect(request.url)
 
     return render_template('index.html')
+
 
 
 # Download file route
