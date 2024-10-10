@@ -290,18 +290,30 @@ def upload_file():
         if file and allowed_file(file.filename):
             try:
                 filename = secure_filename(file.filename)
-                result = cloudinary.uploader.upload(file, folder="uploads/", resource_type="raw")
-                file_url = result['secure_url']
-                public_id = result['public_id']
+                temp_dir = tempfile.mkdtemp()
+                local_zip_path = os.path.join(temp_dir, filename)
                 
-                resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
-                if not resource_pack_folder:
-                    return jsonify({"error": "Failed to extract the resource pack"}), 500
-                
-                blocks_folder = get_blocks_folder(resource_pack_folder)
-                
+                # Save the uploaded file locally
+                file.save(local_zip_path)
+                logger.info(f"File saved locally at: {local_zip_path}")
+
+                # Step 2: Extract the archive locally
+                extracted_folder = os.path.splitext(local_zip_path)[0]
+                with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(extracted_folder)
+                logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
+
+                # Step 3: Delete unnecessary content
+                logger.info(f"Deleting unnecessary content from {extracted_folder}")
+                delete_unnecessary_content(extracted_folder)
+
+                # Step 4: Get the blocks folder
+                blocks_folder = get_blocks_folder(extracted_folder)
+
+                # Step 5: Resize images to 32x32
                 resize_images_to_32x(blocks_folder)
-                
+
+                # Step 6: Rename images
                 rename_map = {
                     "acacia_log": "log_plum",
             "acacia_planks": "planks_plum",
@@ -595,7 +607,8 @@ def upload_file():
             "wooden_sword": "wood_sword"
                 }
                 temp_folder = rename_images(blocks_folder, rename_map)
-                
+
+                # Step 7: Copy overridden images if any
                 override_list = [
                     "allium",
             "azure_bluet",
@@ -820,25 +833,49 @@ def upload_file():
             "glistering_melon_slice"
                 ]
                 copy_overridden_images(blocks_folder, temp_folder, override_list)
-                
-                base_folder_copy = copy_base_pack(BASE_FOLDER)
-                copy_to_base_folder(temp_folder, base_folder_copy)
-                
-                cloudinary_url, local_zip_path = zip_base_pack(base_folder_copy, public_id)
 
+                # Step 8: Copy the base pack
+                base_folder_copy = copy_base_pack(BASE_FOLDER)
+
+                # Step 9: Copy the modified textures to the base pack
+                copy_to_base_folder(temp_folder, base_folder_copy)
+
+                # Step 10: Zip the final content
+                parent_folder_name = "Converted_Texture_Pack"
+                final_zip_filename = os.path.join(temp_dir, f"{parent_folder_name}.zip")
+                with zipfile.ZipFile(final_zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for root, dirs, files in os.walk(base_folder_copy):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            rel_path_in_base = os.path.relpath(file_path, base_folder_copy)
+                            arcname = os.path.join(parent_folder_name, rel_path_in_base)
+                            zipf.write(file_path, arcname)
+                logger.info(f"Zipped modified content to: {final_zip_filename}")
+
+                # Step 11: Upload the final zip to Cloudinary
+                result = cloudinary.uploader.upload(final_zip_filename, 
+                                                    resource_type="raw", 
+                                                    folder="processed_packs/",
+                                                    use_filename=True,
+                                                    unique_filename=False)
+                cloudinary_url = result['secure_url']
+                logger.info(f"Zipped content uploaded to Cloudinary: {cloudinary_url}")
+
+                # Store the zip file path for downloading
                 app.config['TEMP_FILES'] = getattr(app.config, 'TEMP_FILES', {})
-                temp_id = os.path.basename(local_zip_path)
-                app.config['TEMP_FILES'][temp_id] = local_zip_path
+                temp_id = os.path.basename(final_zip_filename)
+                app.config['TEMP_FILES'][temp_id] = final_zip_filename
 
                 return jsonify({
                     "message": "File processed successfully",
-                    "download_url": url_for('download_file', filename=temp_id, _external=True)
+                    "download_url": cloudinary_url  # Return the Cloudinary URL for downloading
                 })
             except Exception as e:
                 logger.error(f"An error occurred during processing: {str(e)}")
                 return jsonify({"error": str(e)}), 500
     
     return render_template('index.html')
+
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
