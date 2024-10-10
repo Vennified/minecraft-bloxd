@@ -12,7 +12,7 @@ from flask import Flask, request, redirect, url_for, render_template, flash, sen
 from werkzeug.utils import secure_filename
 from PIL import Image
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -139,7 +139,37 @@ def delete_unnecessary_content(pack_folder):
     
     logger.info("Finished deleting specified content")
 
+def extract_if_archive_cloudinary(file_url, public_id):
+    logger.info(f"Starting extraction process for file: {file_url}")
+    temp_dir = tempfile.mkdtemp()
+    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
+    
+    try:
+        os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
+        response = requests.get(file_url)
+        response.raise_for_status()  # Raises an HTTPError for bad responses
+        
+        with open(local_zip_path, 'wb') as f:
+            f.write(response.content)
+        logger.info(f"Downloaded zip file to: {local_zip_path}")
+        
+        extracted_folder = os.path.splitext(local_zip_path)[0]
+        with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extracted_folder)
+        logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
 
+        # Call the deletion function to remove unnecessary content
+        delete_unnecessary_content(extracted_folder)
+
+        return extracted_folder
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error downloading file: {str(e)}")
+    except zipfile.BadZipFile:
+        logger.error(f"Error: The file is not a zip file or is corrupted")
+    except Exception as e:
+        logger.error(f"Unexpected error during extraction: {str(e)}")
+    
+    return None
 
 def get_blocks_folder(pack_folder):
     for root, dirs, files in os.walk(pack_folder):
@@ -265,6 +295,9 @@ def upload_file():
                 public_id = result['public_id']
                 
                 resource_pack_folder = extract_if_archive_cloudinary(file_url, public_id)
+                if not resource_pack_folder:
+                    return jsonify({"error": "Failed to extract the resource pack"}), 500
+                
                 blocks_folder = get_blocks_folder(resource_pack_folder)
                 
                 resize_images_to_32x(blocks_folder)
