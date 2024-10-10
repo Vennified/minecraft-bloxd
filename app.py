@@ -35,12 +35,12 @@ if not os.path.exists(UPLOAD_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def delete_unnecessary_content(pack_folder):
     """
     Deletes specified directories and files from the texture pack folder.
     """
     static_paths = [
-        # Static paths (Java packs)
         "pack.png",
         "pack.mcmeta",
         "assets/minecraft/atlases",
@@ -48,6 +48,7 @@ def delete_unnecessary_content(pack_folder):
         "assets/minecraft/font",
         "assets/minecraft/lang",
         "assets/minecraft/models",
+        "assets/minecraft/optifine"
         "assets/minecraft/particles",
         "assets/minecraft/shaders",
         "assets/minecraft/texts",
@@ -109,64 +110,34 @@ def delete_unnecessary_content(pack_folder):
         "textures/terrain_texture.json"
     ]
     
-    # Loop through each static path and attempt to delete it
     for static_path in static_paths:
-        # Construct the full path based on the pack_folder and static part
-        full_path = os.path.join(pack_folder, static_path)
-
-        if os.path.isfile(full_path):
+        full_path = os.path.normpath(os.path.join(pack_folder, static_path))
+        
+        if os.path.exists(full_path):
             try:
-                os.remove(full_path)
-                logger.info(f"Deleted file: {full_path}")
+                if os.path.isfile(full_path):
+                    os.remove(full_path)
+                    logger.info(f"Deleted file: {full_path}")
+                elif os.path.isdir(full_path):
+                    shutil.rmtree(full_path)
+                    logger.info(f"Deleted directory: {full_path}")
             except Exception as e:
-                logger.error(f"Error deleting file {full_path}: {str(e)}")
-        elif os.path.isdir(full_path):
-            try:
-                shutil.rmtree(full_path)
-                logger.info(f"Deleted directory: {full_path}")
-            except Exception as e:
-                logger.error(f"Error deleting directory {full_path}: {str(e)}")
+                logger.error(f"Error deleting {full_path}: {str(e)}")
         else:
             logger.info(f"Not found: {full_path}")
     
+    # Delete empty directories
+    for root, dirs, files in os.walk(pack_folder, topdown=False):
+        for dir in dirs:
+            try:
+                dir_path = os.path.join(root, dir)
+                if not os.listdir(dir_path):
+                    os.rmdir(dir_path)
+                    logger.info(f"Deleted empty directory: {dir_path}")
+            except Exception as e:
+                logger.error(f"Error deleting empty directory {dir_path}: {str(e)}")
+    
     logger.info("Finished deleting specified content")
-
-
-def extract_if_archive_cloudinary(file_url, public_id):
-    temp_dir = tempfile.mkdtemp()
-    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
-    os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
-    response = requests.get(file_url)
-    with open(local_zip_path, 'wb') as f:
-        f.write(response.content)
-    extracted_folder = os.path.splitext(local_zip_path)[0]
-    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extracted_folder)
-    logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
-
-    # Call the deletion function to remove unnecessary content
-    delete_unnecessary_content(extracted_folder)
-
-    return extracted_folder
-
-
-def extract_if_archive_cloudinary(file_url, public_id):
-    temp_dir = tempfile.mkdtemp()
-    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
-    os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
-    response = requests.get(file_url)
-    with open(local_zip_path, 'wb') as f:
-        f.write(response.content)
-    extracted_folder = os.path.splitext(local_zip_path)[0]
-    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extracted_folder)
-    logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
-
-    # Call the deletion function to remove unnecessary content
-    delete_unnecessary_content(extracted_folder)
-
-    return extracted_folder
-
 
 
 
