@@ -39,66 +39,116 @@ def delete_unnecessary_content(pack_folder):
     """
     Deletes specified directories and files from the texture pack folder.
     """
-    to_delete = [
-        # Files in root directory
+    static_paths = [
+        # Static paths (Java packs)
         "pack.png",
         "pack.mcmeta",
-        
-        # Directories
-        "atlases",
-        "blockstates",
-        "optifine"
-        "font",
-        "lang",
-        "models",
-        "particles",
-        "shaders",
-        "texts",
-        "colormap",
-        "effect",
-        "entity",
-        "environment",
-        "gui",
-        "item",
-        "map",
-        "misc",
-        "mob_effect",
-        "painting",
-        "particle",
-        "trims",
+        "assets/minecraft/atlases",
+        "assets/minecraft/blockstates",
+        "assets/minecraft/font",
+        "assets/minecraft/lang",
+        "assets/minecraft/models",
+        "assets/minecraft/particles",
+        "assets/minecraft/shaders",
+        "assets/minecraft/texts",
+        "assets/minecraft/textures/colormap",
+        "assets/minecraft/textures/effect",
+        "assets/minecraft/textures/entity",
+        "assets/minecraft/textures/environment",
+        "assets/minecraft/textures/font",
+        "assets/minecraft/textures/gui",
+        "assets/minecraft/textures/item",
+        "assets/minecraft/textures/map",
+        "assets/minecraft/textures/misc",
+        "assets/minecraft/textures/mod_effect",
+        "assets/minecraft/textures/models",
+        "assets/minecraft/textures/painting",
+        "assets/minecraft/textures/particle",
+        "assets/minecraft/textures/trims",
+
+        # Static paths (Bedrock packs)
         "animation_controllers",
         "animations",
         "attachables",
         "cameras",
+        "entity",
         "fogs",
+        "font",
+        "models",
+        "particles",
         "render_controllers",
         "sounds",
+        "texts",
         "ui",
-        
-        # Additional files
         ".gitignore",
         "biomes_client.json",
         "blocks.json",
-        "bug_pack_icon.png",
+        "pack_icon.png"
         "manifest.json",
-        "pack_icon.png",
         "README.md",
         "sounds.json",
-        "splashes.json"
+        "splashes.json",
+        "atlases",
+        "textures/colormap",
+        "textures/entity",
+        "textures/environment",
+        "textures/gui",
+        "textures/items",
+        "textures/map",
+        "textures/misc",
+        "textures/models",
+        "textures/painting",
+        "textures/particle",
+        "textures/persona_thumbnails",
+        "textures/trims",
+        "textures/ui",
+        "textures/flame_atlas.png",
+        "textures/flipbook_textures.json",
+        "textures/forcefield_atlas.png",
+        "textures/item_texture.json",
+        "textures/terrain_texture.json"
     ]
+    
+    # Loop through each static path and attempt to delete it
+    for static_path in static_paths:
+        # Construct the full path based on the pack_folder and static part
+        full_path = os.path.join(pack_folder, static_path)
 
-    for item in to_delete:
-        path = os.path.join(pack_folder, item)
-        if os.path.isfile(path):
-            os.remove(path)
-            logger.info(f"Deleted file: {path}")
-        elif os.path.isdir(path):
-            shutil.rmtree(path)
-            logger.info(f"Deleted directory: {path}")
+        if os.path.isfile(full_path):
+            try:
+                os.remove(full_path)
+                logger.info(f"Deleted file: {full_path}")
+            except Exception as e:
+                logger.error(f"Error deleting file {full_path}: {str(e)}")
+        elif os.path.isdir(full_path):
+            try:
+                shutil.rmtree(full_path)
+                logger.info(f"Deleted directory: {full_path}")
+            except Exception as e:
+                logger.error(f"Error deleting directory {full_path}: {str(e)}")
         else:
-            logger.info(f"Not found: {path}")
-
+            logger.info(f"Not found: {full_path}")
+    
     logger.info("Finished deleting specified content")
+
+
+def extract_if_archive_cloudinary(file_url, public_id):
+    temp_dir = tempfile.mkdtemp()
+    local_zip_path = os.path.join(temp_dir, f"{public_id}.zip")
+    os.makedirs(os.path.dirname(local_zip_path), exist_ok=True)
+    response = requests.get(file_url)
+    with open(local_zip_path, 'wb') as f:
+        f.write(response.content)
+    extracted_folder = os.path.splitext(local_zip_path)[0]
+    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extracted_folder)
+    logger.info(f"Extracted {local_zip_path} to {extracted_folder}")
+
+    # Call the deletion function to remove unnecessary content
+    delete_unnecessary_content(extracted_folder)
+
+    return extracted_folder
+
 
 def extract_if_archive_cloudinary(file_url, public_id):
     temp_dir = tempfile.mkdtemp()
