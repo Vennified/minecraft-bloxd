@@ -48,7 +48,7 @@ def delete_unnecessary_content(pack_folder):
         "assets/minecraft/font",
         "assets/minecraft/lang",
         "assets/minecraft/models",
-        "assets/minecraft/optifine"
+        "assets/minecraft/optifine",
         "assets/minecraft/particles",
         "assets/minecraft/shaders",
         "assets/minecraft/texts",
