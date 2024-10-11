@@ -1,15 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const dashedBox = document.querySelector('.dashed-box');
-  const fileInput = document.getElementById('file');
-
-  // Trigger file input when dashed-box is clicked
-  dashedBox.addEventListener('click', function() {
-    fileInput.click();
+  // Trigger file input when the dashed box (#uploadfile) is clicked
+  document.getElementById('uploadfile').addEventListener('click', function() {
+    document.getElementById('fileInput').click();
   });
 
   // Handle file input change and trigger the form submission
-  fileInput.addEventListener('change', async (event) => {
-    const file = fileInput.files[0];
+  document.getElementById('fileInput').addEventListener('change', async (event) => {
+    const file = event.target.files[0]; // Get the selected file
 
     if (file) {
       const formData = new FormData();
@@ -18,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         alert('Uploading and processing file. Please wait...');
 
+        // Send the form data (file) via POST request
         const response = await fetch("/", {
           method: "POST",
           body: formData
@@ -37,8 +35,10 @@ document.addEventListener('DOMContentLoaded', function() {
           const downloadLink = document.getElementById('downloadLink');
           const downloadSection = document.getElementById('downloadSection');
 
+          // Show the download link
           downloadLink.href = data.download_url;
           downloadSection.style.display = "block";
+
           alert('File uploaded and processed successfully! You can now download your processed pack.');
         }
       } catch (error) {
