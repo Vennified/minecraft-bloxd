@@ -1,22 +1,132 @@
-.download-container {
-    text-align: center;
-    margin: 20px auto;
-    padding: 20px;
-    background-color: #f9f9f9;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #060609;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Roboto', sans-serif;
 }
 
-.download-button {
-    background-color: #4CAF50;
+.frame {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Title text - default to top-left */
+.text-box {
+    position: absolute;
+    top: 16.78vh;
+    left: 29.86vw;
+    width: 40.35vw;
+    height: 5.78vh;
     color: #fff;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+    text-align: center;
 }
 
-.download-button:hover {
-    background-color: #3e8e41;
+.text-box h1 {
+    font-size: 2.5vw;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Independent description text */
+.description-text {
+    position: absolute;
+    width: 37.71vw;
+    height: 2.89vh;
+    top: 25.44vh;
+    left: 32.5vw;
+    color: #9b9b9b;
+    font-size: 1vw;
+    margin: 0;
+}
+
+/* Center icon styling - independent */
+.center-icon {
+    position: absolute;
+    top: 55.78vh;
+    left: 48.89vw;
+    width: 2.22vw;
+}
+
+/* New resource pack text styling */
+.resource-pack-text {
+    position: absolute;
+    top: 60.56vh;
+    left: 38.50vw;
+    width: 22.87vw;
+    height: 1.78vh;
+    color: #fff;
+    font-size: .87vw;
+    text-align: center;
+}
+
+/* 'Upload Files' text styling */
+.upload-files-text {
+    position: absolute;
+    top: 36.44vh;
+    left: 45.83vw;
+    width: 8.33vw;
+    height: 2.67vh;
+    color: #fff;
+    font-size: 1.33vw;
+    font-weight: 700;
+}
+
+/* Discord link styling */
+.discord-link {
+    position: absolute;
+    top: 98.22vh;
+    left: 41.88vw;
+    width: 16.25vw;
+    height: 1.78vh;
+    color: #545454;
+    font-size: .67vw;
+    font-weight: 700;
+    text-decoration: underline;
+    text-align: center
+}
+
+.discord-link:hover {
+    text-decoration: underline;
+}
+
+/* Top-left icon */
+.top-left-icon {
+    position: absolute;
+    top: 24.44vh;
+    left: 29.86vw;
+    width: 1.81vw;
+}
+
+/* Box with box shadow glow */
+.background-box {
+    position: absolute;
+    top: 36.44vh;
+    left: 28.54vw;
+    width: 42.93vw;
+    height: 38.67vh;
+    background-color: #07070A;
+    border-radius: 20px;
+    box-shadow: 0px 0px 2vw rgba(52, 126, 234, 0.2);
+}
+
+/* Dashed box */
+.dashed-box {
+    position: absolute;
+    top: 48.78vh;
+    left: 34.17vw;
+    width: 31.67vw;
+    height: 21.00vh;
+    border: 4px dashed #14141c;
+    border-radius: 10px;
+    background-color: transparent;
+    box-sizing: border-box;
 }

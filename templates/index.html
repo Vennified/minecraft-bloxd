@@ -3,34 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Resource Pack Image Manager</title>
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+    <title>Minecraft to Bloxd</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Minecraft Resource Pack Image Manager</h1>
-
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-
-    <form id="uploadForm" method="post" enctype="multipart/form-data">
-        <label for="file">Select Resource Pack (zip/jar):</label>
-        <input type="file" name="file" id="file" accept=".zip,.jar" required>
-        <br><br>
-        <input type="submit" value="Upload">
-    </form>
-
-    <div id="downloadSection" style="display:none;">
-        <h2>Your file is ready for download:</h2>
-        <a id="downloadLink" href="#" download>Download Processed Pack</a>
+    <div class="frame">
+        <div class="background-box"></div>
+        <div class="text-box">
+            <h1>MINECRAFT TO BLOXD</h1>
+        </div>
+        <p class="description-text">Discover new possibilities through the Minecraft to Bloxd Texture Pack Converter</p> <!-- Now independent -->
+        <img src="https://i.imgur.com/ZX1PG1m.png" alt="Icon" class="center-icon">
+        <p class="resource-pack-text">Click to choose your Minecraft Resource Pack zip file</p>
+        <p class="upload-files-text">Upload Files</p>
+        <a href="#" class="discord-link">Join the Discord Server to learn more!</a>
+        <img src="https://i.imgur.com/uQyWmNo.png" alt="Top-left icon" class="top-left-icon">
+        <div class="dashed-box">
+          <input type="file" id="file" name="file" style="display: none;">
+      </div>
+      
     </div>
-
-    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 </body>
 </html>
