@@ -13,20 +13,26 @@
         <div class="text-box">
             <h1>MINECRAFT TO BLOXD</h1>
         </div>
-        <p class="description-text">Discover new possibilities through the Minecraft to Bloxd Texture Pack Converter</p> <!-- Now independent -->
+        <p class="description-text">Discover new possibilities through the Minecraft to Bloxd Texture Pack Converter</p>
         <img src="https://i.imgur.com/ZX1PG1m.png" alt="Icon" class="center-icon">
         <p class="resource-pack-text">Click to choose your Minecraft Resource Pack zip file</p>
-        <p class="upload-files-text">Upload Files</p>
         <a href="#" class="discord-link">Join the Discord Server to learn more!</a>
         <img src="https://i.imgur.com/uQyWmNo.png" alt="Top-left icon" class="top-left-icon">
-        <div class="dashed-box">
+        
+        <!-- Changed the ID here to #uploadfile -->
+        <div class="dashed-box" id="uploadfile">
           <p>Click here to upload a file</p>
-          <input type="file" id="file" name="file" style="display: none;">
-      </div>
-  </div>
-      
-  <script src="static/js/script.js"></script>
 
+          <!-- Changed the ID here to #fileInput to match your JS -->
+          <input type="file" id="fileInput" name="file" style="display: none;">
+        </div>
+
+        <!-- Download section (initially hidden) -->
+        <div id="downloadSection" style="display: none;">
+          <a href="#" id="downloadLink">Download Processed File</a>
+        </div>
     </div>
+    
+    <script src="static/js/script.js"></script>
 </body>
 </html>
