@@ -137,25 +137,32 @@ body {
     background-color: #77777720; /* Semi-transparent white */
 }
 
+/* Progress Bar Container */
 #progress-bar-container {
-    width: 31.67vw;
+    position: absolute; /* Independent positioning */
+    top: 0vh; /* Adjust the vertical positioning */
+    left: 0vw; /* Adjust the horizontal positioning */
+    width: 20vw; /* Adjust the width based on viewport width */
     background-color: #ddd;
     border-radius: 25px;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    z-index: 100; /* Ensure it's above other elements */
 }
 
+/* Progress Bar */
 #progress-bar {
-    height: 30px;
-    width: 1%;
-    background-color: #4caf50;
-    border-radius: 25px;
+    height: 1.666vh;
+    width: 1%; /* Initial width */
+    background-image: linear-gradient(to right, #347DEA, #0c4cab);
+    border-radius: 1vh;
     transition: width 0.5s;
 }
 
+/* Progress Status */
 #progress-status {
-    font-size: 18px;
+    position: absolute; /* Independent positioning */
+    top: 4.5vh; /* Below the progress bar */
+    left: 2vw;
+    font-size: 1.5vh;
     color: #fff;
-    text-align: center;
-    margin-top: 10px;
+    z-index: 100;
 }

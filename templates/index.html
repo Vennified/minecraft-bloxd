@@ -8,6 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Independent progress bar and status -->
+    <div id="progress-bar-container" style="display: none;">
+        <div id="progress-bar"></div>
+    </div>
+    <div id="progress-status" style="display: none;"></div>
+
     <div class="frame">
         <div class="background-box"></div>
         <div class="text-box">
@@ -16,25 +22,17 @@
         <p class="description-text">Discover new possibilities through the Minecraft to Bloxd Texture Pack Converter</p>
         <img src="https://i.imgur.com/ZX1PG1m.png" alt="Icon" class="center-icon">
         <p class="resource-pack-text">Click to choose your Minecraft Resource Pack zip file</p>
-        <a href="#" class="discord-link">Join the Discord Server to learn more!</a>
-        <img src="https://i.imgur.com/uQyWmNo.png" alt="Top-left icon" class="top-left-icon">
-        
-        <!-- Changed the ID here to #uploadfile -->
         <div class="dashed-box" id="uploadfile">
-
-          <!-- Changed the ID here to #fileInput to match your JS -->
-          <input type="file" id="fileInput" name="file" style="display: none;">
+            <input type="file" id="fileInput" name="file" style="display: none;">
         </div>
-
-        <div id="progress-bar-container" style="display: none;">
-          <div id="progress-bar"></div>
-        </div>
-        <div id="progress-status" style="display: none;"></div>
 
         <!-- Download section (initially hidden) -->
         <div id="downloadSection" style="display: none;">
-          <a href="#" id="downloadLink">Download Processed File</a>
+            <a href="#" id="downloadLink">Download Processed File</a>
         </div>
+
+        <a href="#" class="discord-link">Join the Discord Server to learn more!</a>
+        <img src="https://i.imgur.com/uQyWmNo.png" alt="Top-left icon" class="top-left-icon">
     </div>
     
     <script src="static/js/upload.js"></script>
