@@ -1,49 +1,61 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+  const uploadFileBox = document.getElementById('uploadfile');
+  const fileInput = document.getElementById('fileInput');
+  const progressBar = document.getElementById('progress-bar');
+  const progressStatus = document.getElementById('progress-status');
+  const progressBarContainer = document.getElementById('progress-bar-container');
+  const downloadLink = document.getElementById('downloadLink');
+  const downloadSection = document.getElementById('downloadSection');
+
   // Trigger file input when the dashed box (#uploadfile) is clicked
-  document.getElementById('uploadfile').addEventListener('click', function() {
-    document.getElementById('fileInput').click();
+  uploadFileBox.addEventListener('click', function () {
+      fileInput.click();
   });
 
-  // Handle file input change and trigger the form submission
-  document.getElementById('fileInput').addEventListener('change', async (event) => {
-    const file = event.target.files[0]; // Get the selected file
+  // Handle file input change and trigger the upload
+  fileInput.addEventListener('change', async function (event) {
+      const file = event.target.files[0];
+      if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
 
-    if (file) {
-      const formData = new FormData();
-      formData.append("file", file);
+          try {
+              // Show progress bar and status
+              progressBarContainer.style.display = 'block';
+              progressStatus.style.display = 'block';
+              progressStatus.textContent = 'Uploading (0%)';
 
-      try {
-        alert('Uploading and processing file. Please wait...');
+              // Start receiving server-sent events for progress updates
+              const eventSource = new EventSource('/upload_progress');
 
-        // Send the form data (file) via POST request
-        const response = await fetch("/", {
-          method: "POST",
-          body: formData
-        });
+              eventSource.onmessage = function (event) {
+                  const [message, percentage] = event.data.split(' - ');
+                  progressBar.style.width = percentage;
+                  progressStatus.textContent = `${message} (${percentage})`;
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+                  if (percentage === '100%') {
+                      eventSource.close(); // Close SSE connection when complete
+                  }
+              };
 
-        const data = await response.json();
+              const response = await fetch("/", {
+                  method: "POST",
+                  body: formData
+              });
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
 
-        if (data.download_url) {
-          const downloadLink = document.getElementById('downloadLink');
-          const downloadSection = document.getElementById('downloadSection');
+              const data = await response.json();
 
-          // Show the download link
-          downloadLink.href = data.download_url;
-          downloadSection.style.display = "block";
-
-          alert('File uploaded and processed successfully! You can now download your processed pack.');
-        }
-      } catch (error) {
-        alert(`Error: ${error.message}`);
+              if (data.download_url) {
+                  downloadLink.href = data.download_url;
+                  downloadSection.style.display = "block";
+              }
+          } catch (error) {
+              alert(`Error: ${error.message}`);
+          }
       }
-    }
   });
 });

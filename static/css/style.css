@@ -96,6 +96,7 @@ body {
 
 .discord-link:hover {
     text-decoration: underline;
+    background-color: #5865F2;
 }
 
 /* Top-left icon */
@@ -114,7 +115,7 @@ body {
     width: 42.93vw;
     height: 38.67vh;
     background-color: #07070A;
-    border-radius: 20px;
+    border-radius: 1.39vw;
     box-shadow: 0px 0px 2vw rgba(52, 126, 234, 0.2);
 }
 
@@ -126,7 +127,35 @@ body {
     width: 31.67vw;
     height: 21.00vh;
     border: 4px dashed #14141c;
-    border-radius: 10px;
+    border-radius: 1.11vh 0.69vw;
     background-color: transparent;
     box-sizing: border-box;
+    transition: background-color 0.3s ease; /* Add smooth transition */
+}
+
+.dashed-box:hover {
+    background-color: #77777720; /* Semi-transparent white */
+}
+
+#progress-bar-container {
+    width: 31.67vw;
+    background-color: #ddd;
+    border-radius: 25px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+#progress-bar {
+    height: 30px;
+    width: 1%;
+    background-color: #4caf50;
+    border-radius: 25px;
+    transition: width 0.5s;
+}
+
+#progress-status {
+    font-size: 18px;
+    color: #fff;
+    text-align: center;
+    margin-top: 10px;
 }

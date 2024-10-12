@@ -21,11 +21,15 @@
         
         <!-- Changed the ID here to #uploadfile -->
         <div class="dashed-box" id="uploadfile">
-          <p>Click here to upload a file</p>
 
           <!-- Changed the ID here to #fileInput to match your JS -->
           <input type="file" id="fileInput" name="file" style="display: none;">
         </div>
+
+        <div id="progress-bar-container" style="display: none;">
+          <div id="progress-bar"></div>
+        </div>
+        <div id="progress-status" style="display: none;"></div>
 
         <!-- Download section (initially hidden) -->
         <div id="downloadSection" style="display: none;">
