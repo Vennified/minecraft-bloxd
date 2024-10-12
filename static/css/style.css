@@ -96,7 +96,7 @@ body {
 
 .discord-link:hover {
     text-decoration: underline;
-    background-color: #5865F2;
+    color: #5865F2;
 }
 
 /* Top-left icon */
@@ -140,9 +140,9 @@ body {
 /* Progress Bar Container */
 #progress-bar-container {
     position: absolute; /* Independent positioning */
-    top: 0vh; /* Adjust the vertical positioning */
-    left: 0vw; /* Adjust the horizontal positioning */
-    width: 20vw; /* Adjust the width based on viewport width */
+    top: 58.888vh; /* Adjust the vertical positioning */
+    left: 45.416vw; /* Adjust the horizontal positioning */
+    width: 9.097vw; /* Adjust the width based on viewport width */
     background-color: #ddd;
     border-radius: 25px;
     z-index: 100; /* Ensure it's above other elements */
@@ -160,9 +160,30 @@ body {
 /* Progress Status */
 #progress-status {
     position: absolute; /* Independent positioning */
-    top: 4.5vh; /* Below the progress bar */
-    left: 2vw;
+    top: 61.44vh; /* Below the progress bar */
+    left: 47.25vw;
     font-size: 1.5vh;
+    font-weight: 600;
     color: #fff;
     z-index: 100;
 }
+
+/* Download Button */
+.download-button {
+    position: absolute;
+    top: 70vh; /* Adjust this position as needed */
+    left: 50%;
+    transform: translateX(-50%); /* Center the button */
+    display: none; /* Initially hidden */
+    background-size: contain; /* Adjust background size */
+    background-repeat: no-repeat;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+}
+
+.download-button:hover {
+    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white overlay */
+}
+
+

@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const progressBarContainer = document.getElementById('progress-bar-container');
   const downloadLink = document.getElementById('downloadLink');
   const downloadSection = document.getElementById('downloadSection');
+  const downloadButtonContainer = document.getElementById('downloadButtonContainer');
+  const downloadButton = document.getElementById('downloadButton');
 
   // Trigger file input when the dashed box (#uploadfile) is clicked
   uploadFileBox.addEventListener('click', function () {
@@ -35,6 +37,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                   if (percentage === '100%') {
                       eventSource.close(); // Close SSE connection when complete
+                      // Hide center icon and resource pack text
+                      document.querySelector('.center-icon').style.display = 'none';
+                      document.querySelector('.resource-pack-text').style.display = 'none';
                   }
               };
 
@@ -50,8 +55,13 @@ document.addEventListener('DOMContentLoaded', function () {
               const data = await response.json();
 
               if (data.download_url) {
-                  downloadLink.href = data.download_url;
-                  downloadSection.style.display = "block";
+                  // Show download button with background image
+                  downloadButtonContainer.style.display = "block";
+                  downloadButton.href = data.download_url;
+                  downloadButton.style.backgroundImage = "url('path/to/your/icon.png')"; // Replace with your button icon
+                  downloadButton.style.width = "200px"; // Set your desired width
+                  downloadButton.style.height = "50px"; // Set your desired height
+                  downloadButton.style.display = "block"; // Make it block to enable hover effect
               }
           } catch (error) {
               alert(`Error: ${error.message}`);
