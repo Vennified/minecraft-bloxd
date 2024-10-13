@@ -21,15 +21,18 @@
         </div>
         <p class="description-text">Discover new possibilities through the Minecraft to Bloxd Texture Pack Converter</p>
         <img src="https://i.imgur.com/ZX1PG1m.png" alt="Icon" class="center-icon">
+        <p class="upload-files-text">Upload Files</p>
         <p class="resource-pack-text">Click to choose your Minecraft Resource Pack zip file</p>
         <div class="dashed-box" id="uploadfile">
             <input type="file" id="fileInput" name="file" style="display: none;">
         </div>
 
-        <!-- Download section (initially hidden) -->
-        <div id="downloadSection" style="display: none;">
-            <a href="#" id="downloadLink">Download Processed File</a>
-        </div>
+        <a id="downloadLink" href="{{ filename }}" style="display: none;">
+            <button class="download-button" id="downloadButton">
+                <img src="https://i.imgur.com/9TRRL3D.png" class="download-icon">
+            </button>
+        </a>
+        
 
         <a href="#" class="discord-link">Join the Discord Server to learn more!</a>
         <img src="https://i.imgur.com/uQyWmNo.png" alt="Top-left icon" class="top-left-icon">

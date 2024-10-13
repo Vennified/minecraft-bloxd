@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const progressStatus = document.getElementById('progress-status');
     const progressBarContainer = document.getElementById('progress-bar-container');
     const downloadLink = document.getElementById('downloadLink');
-    const downloadSection = document.getElementById('downloadSection');
+    const downloadButton = document.getElementById('downloadButton');
     const resourcePackText = document.querySelector('.resource-pack-text'); // Select the resource pack text
     const centerIcon = document.querySelector('.center-icon'); // Select the center icon
 
@@ -56,8 +56,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = await response.json();
 
                 if (data.download_url) {
+                    // Hide the progress bar and status once the download link is ready
+                    progressBarContainer.style.display = 'none';
+                    progressStatus.style.display = 'none';
+
+                    // Display the download button
                     downloadLink.href = data.download_url;
-                    downloadSection.style.display = "block";
+                    downloadButton.style.display = 'block';
                 }
             } catch (error) {
                 alert(`Error: ${error.message}`);

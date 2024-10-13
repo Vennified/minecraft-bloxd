@@ -169,3 +169,12 @@ body {
     color: #fff;
     z-index: 100;
 }
+
+/* Download button */
+.download-button {
+    position: absolute;
+    top: 65vh; /* Adjust as needed */
+    left: 45vw; /* Adjust as needed */
+    z-index: 1000; /* High z-index to ensure it's on top */
+    display: none; /* Initially hidden */
+}
