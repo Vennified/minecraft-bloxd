@@ -173,18 +173,27 @@ body {
 /* Download button */
 .download-button {
     position: absolute;
-    top: 65vh; /* Adjust as needed */
-    left: 45vw; /* Adjust as needed */
+    background-image: url('https://i.imgur.com/9TRRL3D.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    top: 53.75vh; /* Adjust as needed */
+    left: 47.659vw; /* Adjust as needed */
     z-index: 1000; /* High z-index to ensure it's on top */
     display: block; /* Changed from 'none' to always be visible */
-    padding: 10px 20px;
-    background-color: #347DEA;
+    padding: 5.333vh;
+    background-color: #ffffff62;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    font-size: 0rem;
 }
 
 #downloadLink {
     display: block; /* Ensure the link is always displayed */
+}
+
+.download-button:hover {
+    background-color: #333333;
+    transition: .5s;
 }
