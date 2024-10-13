@@ -19,7 +19,6 @@ body {
     overflow: hidden;
 }
 
-/* Title text - default to top-left */
 .text-box {
     position: absolute;
     top: 16.78vh;
@@ -36,7 +35,6 @@ body {
     margin: 0;
 }
 
-/* Independent description text */
 .description-text {
     position: absolute;
     width: 37.71vw;
@@ -48,7 +46,6 @@ body {
     margin: 0;
 }
 
-/* Center icon styling - independent */
 .center-icon {
     position: absolute;
     top: 55.78vh;
@@ -56,7 +53,6 @@ body {
     width: 2.22vw;
 }
 
-/* New resource pack text styling */
 .resource-pack-text {
     position: absolute;
     top: 60.56vh;
@@ -68,19 +64,18 @@ body {
     text-align: center;
 }
 
-/* 'Upload Files' text styling */
 .upload-files-text {
     position: absolute;
+    text-align: center;
     top: 36.44vh;
-    left: 45.83vw;
-    width: 8.33vw;
+    left: 39.836vw;
+    width: 20.33vw;
     height: 2.67vh;
     color: #fff;
     font-size: 1.33vw;
     font-weight: 700;
 }
 
-/* Discord link styling */
 .discord-link {
     position: absolute;
     top: 98.22vh;
@@ -99,7 +94,6 @@ body {
     color: #5865F2;
 }
 
-/* Top-left icon */
 .top-left-icon {
     position: absolute;
     top: 24.44vh;
@@ -107,7 +101,6 @@ body {
     width: 1.81vw;
 }
 
-/* Box with box shadow glow */
 .background-box {
     position: absolute;
     top: 36.44vh;
@@ -119,7 +112,6 @@ body {
     box-shadow: 0px 0px 2vw rgba(52, 126, 234, 0.2);
 }
 
-/* Dashed box */
 .dashed-box {
     position: absolute;
     top: 48.78vh;
@@ -170,7 +162,6 @@ body {
     z-index: 100;
 }
 
-/* Download button */
 .download-button {
     position: absolute;
     background-image: url('https://i.imgur.com/9TRRL3D.png');

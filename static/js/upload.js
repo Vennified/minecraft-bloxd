@@ -17,13 +17,11 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.addEventListener('change', async function (event) {
         const file = event.target.files[0];
         if (file) {
-            // Hide resource pack text, center icon, and download button
             resourcePackText.style.display = 'none';
             centerIcon.style.display = 'none';
             downloadLink.style.display = 'none';
             downloadButton.style.display = 'none';
 
-            // Reset "Upload Files" text
             uploadFilesText.textContent = 'Upload Files';
 
             const formData = new FormData();
@@ -61,14 +59,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     progressBarContainer.style.display = 'none';
                     progressStatus.style.display = 'none';
 
-                    // Update the download link href
                     downloadLink.href = data.download_url;
                     
-                    // Make both the link and button visible
                     downloadLink.style.display = 'block';
                     downloadButton.style.display = 'block';
 
-                    // Change "Upload Files" to "Download Zip File"
                     uploadFilesText.textContent = 'Download Zip File';
 
                     console.log('Download URL received:', data.download_url);
