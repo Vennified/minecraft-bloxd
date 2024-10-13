@@ -169,21 +169,23 @@ body {
 }
 
 /* Download Button */
+/* Download Button */
 .download-button {
     position: absolute;
     top: 70vh; /* Adjust this position as needed */
     left: 50%;
     transform: translateX(-50%); /* Center the button */
-    display: none; /* Initially hidden */
-    background-size: contain; /* Adjust background size */
-    background-repeat: no-repeat;
+    width: 16px; /* Set the desired width */
+    height: 24px; /* Set the desired height */
+    background-image: url('https://i.imgur.com/jXFzMra.png'); /* Replace with your button icon */
+    background-size: cover; /* Ensure the image covers the button */
+    background-repeat: no-repeat; /* No repeat for background */
     border: none;
     cursor: pointer;
-    transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+    display: block; /* Ensure it's visible */
+    text-decoration: none; /* Remove underline */
 }
 
 .download-button:hover {
-    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white overlay */
+    background-color: #aaaaaa50; /* Disable hover functionality */
 }
-
-
