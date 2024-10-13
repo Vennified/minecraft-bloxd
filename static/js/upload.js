@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const downloadButton = document.getElementById('downloadButton');
     const resourcePackText = document.querySelector('.resource-pack-text');
     const centerIcon = document.querySelector('.center-icon');
+    const uploadFilesText = document.querySelector('.upload-files-text');
 
     uploadFileBox.addEventListener('click', function () {
         fileInput.click();
@@ -16,8 +17,14 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.addEventListener('change', async function (event) {
         const file = event.target.files[0];
         if (file) {
+            // Hide resource pack text, center icon, and download button
             resourcePackText.style.display = 'none';
             centerIcon.style.display = 'none';
+            downloadLink.style.display = 'none';
+            downloadButton.style.display = 'none';
+
+            // Reset "Upload Files" text
+            uploadFilesText.textContent = 'Upload Files';
 
             const formData = new FormData();
             formData.append('file', file);
@@ -57,9 +64,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Update the download link href
                     downloadLink.href = data.download_url;
                     
-                    // Make sure both the link and button are visible
+                    // Make both the link and button visible
                     downloadLink.style.display = 'block';
                     downloadButton.style.display = 'block';
+
+                    // Change "Upload Files" to "Download Zip File"
+                    uploadFilesText.textContent = 'Download Zip File';
 
                     console.log('Download URL received:', data.download_url);
                     console.log('Download link visibility:', downloadLink.style.display);
