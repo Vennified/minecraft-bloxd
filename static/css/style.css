@@ -176,5 +176,15 @@ body {
     top: 65vh; /* Adjust as needed */
     left: 45vw; /* Adjust as needed */
     z-index: 1000; /* High z-index to ensure it's on top */
-    display: none; /* Initially hidden */
+    display: block; /* Changed from 'none' to always be visible */
+    padding: 10px 20px;
+    background-color: #347DEA;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#downloadLink {
+    display: block; /* Ensure the link is always displayed */
 }
