@@ -159,9 +159,11 @@ body {
 
 /* Progress Status */
 #progress-status {
+    width: 18.194vw;
+    text-align: center;
     position: absolute; /* Independent positioning */
     top: 61.44vh; /* Below the progress bar */
-    left: 47.25vw;
+    left: 40.902vw;
     font-size: 1.5vh;
     font-weight: 600;
     color: #fff;
