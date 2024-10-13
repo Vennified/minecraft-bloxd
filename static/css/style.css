@@ -167,25 +167,3 @@ body {
     color: #fff;
     z-index: 100;
 }
-
-/* Download Button */
-/* Download Button */
-.download-button {
-    position: absolute;
-    top: 70vh; /* Adjust this position as needed */
-    left: 50%;
-    transform: translateX(-50%); /* Center the button */
-    width: 16px; /* Set the desired width */
-    height: 24px; /* Set the desired height */
-    background-image: url('https://i.imgur.com/jXFzMra.png'); /* Replace with your button icon */
-    background-size: cover; /* Ensure the image covers the button */
-    background-repeat: no-repeat; /* No repeat for background */
-    border: none;
-    cursor: pointer;
-    display: block; /* Ensure it's visible */
-    text-decoration: none; /* Remove underline */
-}
-
-.download-button:hover {
-    background-color: #aaaaaa50; /* Disable hover functionality */
-}
