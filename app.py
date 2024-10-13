@@ -8,7 +8,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 import requests
-from flask import Flask, request, redirect, url_for, render_template, flash, send_file, jsonify
+from flask import Flask, request, redirect, url_for, render_template, flash, send_file, jsonify, stream_with_context, Response
 from werkzeug.utils import secure_filename
 from PIL import Image
 
@@ -33,7 +33,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def delete_unnecessary_content(pack_folder):
@@ -868,6 +868,7 @@ def download_file(filename):
         if filename in temp_files:
             return send_file(temp_files[filename], as_attachment=True, download_name=f"{filename}.zip")
         else:
+
             return redirect(filename)
     except Exception as e:
         logger.error(f"Error in download_file: {str(e)}")
@@ -876,6 +877,26 @@ def download_file(filename):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/upload_progress', methods=['GET'])
+def upload_progress():
+    def generate():
+        tasks = [
+            {"message": "Uploading", "progress": 10},
+            {"message": "Deleting unnecessary content", "progress": 30},
+            {"message": "Renaming", "progress": 50},
+            {"message": "Transferring", "progress": 70},
+            {"message": "Zipping", "progress": 80},
+            {"message": "Requesting download link", "progress": 90},
+            {"message": "Finalizing", "progress": 100}
+        ]
+
+        for task in tasks:
+
+            time.sleep(2)  
+            yield f"data: {task['message']} - {task['progress']}%\n\n"
+
+    return Response(stream_with_context(generate()), content_type='text/event-stream')
 
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'

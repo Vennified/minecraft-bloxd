@@ -18,34 +18,37 @@ document.addEventListener('DOMContentLoaded', function () {
             centerIcon.style.display = 'none';
             downloadLink.style.display = 'none';
             downloadButton.style.display = 'none';
-    
+
             uploadFilesText.textContent = 'Uploading...';
-    
+
             const formData = new FormData();
             formData.append('file', file);
-    
+
             try {
                 const response = await fetch("/", {
                     method: "POST",
                     body: formData
                 });
-    
-                // Check if the response is JSON
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.download_url) {
+                    downloadLink.href = data.download_url;
                     
-                    if (data.download_url) {
-                        downloadLink.href = data.download_url;
-                        downloadLink.style.display = 'block';
-                        downloadButton.style.display = 'block';
-                        uploadFilesText.textContent = 'Download Zip File';
-                    } else {
-                        console.error('No download URL received in the response');
-                    }
+                    downloadLink.style.display = 'block';
+                    downloadButton.style.display = 'block';
+
+                    uploadFilesText.textContent = 'Download Zip File';
+
+                    console.log('Download URL received:', data.download_url);
+                    console.log('Download link visibility:', downloadLink.style.display);
+                    console.log('Download button visibility:', downloadButton.style.display);
                 } else {
-                    const errorText = await response.text();
-                    throw new Error(`Unexpected response type: ${errorText}`);
+                    console.error('No download URL received in the response');
                 }
             } catch (error) {
                 console.error('Error:', error);
