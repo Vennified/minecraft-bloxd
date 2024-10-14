@@ -11,6 +11,24 @@ document.addEventListener('DOMContentLoaded', function () {
         fileInput.click();
     });
 
+    // Add this function to your JavaScript
+    async function uploadToCloudinary(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'your_unsigned_upload_preset'); // Replace with your actual Cloudinary preset
+
+        const response = await fetch('https://api.cloudinary.com/v1_1/your_cloud_name/raw/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    }
+
     fileInput.addEventListener('change', async function (event) {
         const file = event.target.files[0];
         if (file) {
@@ -21,34 +39,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
             uploadFilesText.textContent = 'Uploading...';
 
-            const formData = new FormData();
-            formData.append('file', file);
-
             try {
-                const response = await fetch("/", {
+                // Step 1: Upload to Cloudinary
+                const cloudinaryResponse = await uploadToCloudinary(file);
+
+                // Step 2: Send the Cloudinary URL to your server for processing
+                const serverResponse = await fetch("/process", {
                     method: "POST",
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cloudinary_url: cloudinaryResponse.secure_url })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                if (!serverResponse.ok) {
+                    throw new Error(`HTTP error! status: ${serverResponse.status}`);
                 }
 
-                const data = await response.json();
+                const data = await serverResponse.json();
 
+                // Step 3: If the server responds with a download URL, update the UI
                 if (data.download_url) {
                     downloadLink.href = data.download_url;
-                    
                     downloadLink.style.display = 'block';
                     downloadButton.style.display = 'block';
 
                     uploadFilesText.textContent = 'Download Zip File';
-
-                    console.log('Download URL received:', data.download_url);
-                    console.log('Download link visibility:', downloadLink.style.display);
-                    console.log('Download button visibility:', downloadButton.style.display);
                 } else {
-                    console.error('No download URL received in the response');
+                    console.error('No download URL received in the server response');
                 }
             } catch (error) {
                 console.error('Error:', error);
