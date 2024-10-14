@@ -180,30 +180,30 @@ def get_blocks_folder(pack_folder):
     logger.error("Blocks folder not found in the resource pack.")
     raise FileNotFoundError("Blocks folder not found in the resource pack.")
 
-def resize_images_to_32x(blocks_folder):
+def resize_images_to_4096x(blocks_folder):
     dirt_image_path = os.path.join(blocks_folder, "dirt.png")
     if not os.path.exists(dirt_image_path):
         raise FileNotFoundError("dirt.png not found in blocks folder, cannot determine resource pack resolution.")
     with Image.open(dirt_image_path) as dirt_img:
         width, height = dirt_img.size
         logger.info(f"dirt.png dimensions: {width}x{height}")
-        if width > 32 and height > 32:
-            logger.info("Resource pack is larger than 32x, resizing images.")
+        if width > 4096 and height > 4096:
+            logger.info("Resource pack is larger than 4096x, resizing images.")
             for filename in os.listdir(blocks_folder):
                 if filename.endswith(".png"):
                     img_path = os.path.join(blocks_folder, filename)
                     with Image.open(img_path) as img:
                         img_width, img_height = img.size
-                        if img_width > 32 and img_height > 32:
-                            img_resized = img.resize((32, 32), Image.NEAREST)
+                        if img_width > 4096 and img_height > 4096:
+                            img_resized = img.resize((4096, 4096), Image.NEAREST)
                             img_resized.save(img_path)
-                            logger.info(f"Resized {filename} from {img_width}x{img_height} to 32x32.")
+                            logger.info(f"Resized {filename} from {img_width}x{img_height} to 4096x4096.")
                         else:
                             logger.info(f"{filename} is {img_width}x{img_height}, no need to resize.")
                 else:
                     logger.info(f"Skipping non-PNG file: {filename}")
         else:
-            logger.info("Resource pack is 32x or lower, no resizing necessary.")
+            logger.info("Resource pack is 4096x or lower, no resizing necessary.")
 
 def rename_images(blocks_folder, rename_map):
     temp_folder = tempfile.mkdtemp()
@@ -302,7 +302,7 @@ def upload_file():
 
                 blocks_folder = get_blocks_folder(extracted_folder)
 
-                resize_images_to_32x(blocks_folder)
+                resize_images_to_4096x(blocks_folder)
 
                 rename_map = {
                     "acacia_log": "log_plum",
