@@ -873,7 +873,28 @@ def download_file(filename):
     except Exception as e:
         logger.error(f"Error in download_file: {str(e)}")
         return jsonify({"error": str(e)}), 404
-    
+
+@app.route('/api/generate-upload-token', methods=['POST'])
+def generate_upload_token():
+    try:
+        # This assumes you're passing the body from the client
+        data = request.get_json()
+
+        # This is where you would interact with Vercel's Blob API to get the upload token
+        token_url = 'https://vercel.com/api/handle-upload'  # Example endpoint for token exchange
+        headers = {'Authorization': 'Bearer YOUR_BLOB_READ_WRITE_TOKEN'}
+
+        response = requests.post(token_url, json=data, headers=headers)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Token generation failed'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 @app.route('/')
 def index():
     return render_template('index.html')

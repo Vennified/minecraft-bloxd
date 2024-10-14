@@ -11,24 +11,6 @@ document.addEventListener('DOMContentLoaded', function () {
         fileInput.click();
     });
 
-    // Add this function to your JavaScript
-    async function uploadToCloudinary(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', 'your_unsigned_upload_preset'); // Replace with your actual Cloudinary preset
-
-        const response = await fetch('https://api.cloudinary.com/v1_1/your_cloud_name/raw/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return await response.json();
-    }
-
     fileInput.addEventListener('change', async function (event) {
         const file = event.target.files[0];
         if (file) {
@@ -40,36 +22,49 @@ document.addEventListener('DOMContentLoaded', function () {
             uploadFilesText.textContent = 'Uploading...';
 
             try {
-                // Step 1: Upload to Cloudinary
-                const cloudinaryResponse = await uploadToCloudinary(file);
+                // Step 1: Request an upload token from your Flask backend
+                const tokenResponse = await fetch('/api/generate-upload-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!tokenResponse.ok) {
+                    throw new Error(`Failed to get upload token! status: ${tokenResponse.status}`);
+                }
+                
+                const { uploadUrl } = await tokenResponse.json();
 
-                // Step 2: Send the Cloudinary URL to your server for processing
-                const serverResponse = await fetch("/process", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ cloudinary_url: cloudinaryResponse.secure_url })
+                // Step 2: Upload the file to Vercel Blob
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
                 });
 
-                if (!serverResponse.ok) {
-                    throw new Error(`HTTP error! status: ${serverResponse.status}`);
+                if (!uploadResponse.ok) {
+                    throw new Error(`File upload failed! status: ${uploadResponse.status}`);
                 }
 
-                const data = await serverResponse.json();
+                const uploadData = await uploadResponse.json();
 
-                // Step 3: If the server responds with a download URL, update the UI
-                if (data.download_url) {
-                    downloadLink.href = data.download_url;
+                // Step 3: Get the uploaded file's URL and update the UI
+                const fileUrl = uploadData.url;
+                
+                if (fileUrl) {
+                    downloadLink.href = fileUrl;
                     downloadLink.style.display = 'block';
                     downloadButton.style.display = 'block';
 
-                    uploadFilesText.textContent = 'Download Zip File';
+                    uploadFilesText.textContent = 'Download Uploaded File';
+                    console.log('File uploaded successfully:', fileUrl);
                 } else {
-                    console.error('No download URL received in the server response');
+                    console.error('No file URL received in the response');
                 }
+
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error during upload:', error);
                 alert(`Error: ${error.message}`);
             }
         }
