@@ -21,50 +21,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
             uploadFilesText.textContent = 'Uploading...';
 
+            const formData = new FormData();
+            formData.append('file', file);
+
             try {
-                // Step 1: Request an upload token from your Flask backend
-                const tokenResponse = await fetch('/api/generate-upload-token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (!tokenResponse.ok) {
-                    throw new Error(`Failed to get upload token! status: ${tokenResponse.status}`);
-                }
-                
-                const { uploadUrl } = await tokenResponse.json();
-
-                // Step 2: Upload the file to Vercel Blob
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const uploadResponse = await fetch(uploadUrl, {
-                    method: 'POST',
+                const response = await fetch("/", {
+                    method: "POST",
                     body: formData
                 });
 
-                if (!uploadResponse.ok) {
-                    throw new Error(`File upload failed! status: ${uploadResponse.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const uploadData = await uploadResponse.json();
+                const data = await response.json();
 
-                // Step 3: Get the uploaded file's URL and update the UI
-                const fileUrl = uploadData.url;
-                
-                if (fileUrl) {
-                    downloadLink.href = fileUrl;
+                if (data.download_url) {
+                    downloadLink.href = data.download_url;
+                    
                     downloadLink.style.display = 'block';
                     downloadButton.style.display = 'block';
 
-                    uploadFilesText.textContent = 'Download Uploaded File';
-                    console.log('File uploaded successfully:', fileUrl);
-                } else {
-                    console.error('No file URL received in the response');
-                }
+                    uploadFilesText.textContent = 'Download Zip File';
 
+                    console.log('Download URL received:', data.download_url);
+                    console.log('Download link visibility:', downloadLink.style.display);
+                    console.log('Download button visibility:', downloadButton.style.display);
+                } else {
+                    console.error('No download URL received in the response');
+                }
             } catch (error) {
-                console.error('Error during upload:', error);
+                console.error('Error:', error);
                 alert(`Error: ${error.message}`);
             }
         }
